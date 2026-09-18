@@ -1,0 +1,13 @@
+DB Connection Error: MongoAPIError: URI must include hostname, domain name, and tld
+    at resolveSRVRecord (c:\Users\Admin\OneDrive\Documents\final_pro\caresync\backend\node_modules\mongodb\lib\connection_string.js:37:15)
+    at MongoClient._connect (c:\Users\Admin\OneDrive\Documents\final_pro\caresync\backend\node_modules\mongodb\lib\mongo_client.js:143:74)
+    at MongoClient.connect (c:\Users\Admin\OneDrive\Documents\final_pro\caresync\backend\node_modules\mongodb\lib\mongo_client.js:122:40)
+    at NativeConnection.createClient (c:\Users\Admin\OneDrive\Documents\final_pro\caresync\backend\node_modules\mongoose\lib\drivers\node-mongodb-native\connection.js:296:16)
+    at NativeConnection.openUri (c:\Users\Admin\OneDrive\Documents\final_pro\caresync\backend\node_modules\mongoose\lib\connection.js:766:34)
+    at Mongoose.connect (c:\Users\Admin\OneDrive\Documents\final_pro\caresync\backend\node_modules\mongoose\lib\index.js:416:15)
+    at Object.<anonymous> (c:\Users\Admin\OneDrive\Documents\final_pro\caresync\backend\dist\app.js:26:20)
+    at Module._compile (node:internal/modules/cjs/loader:1872:14)
+    at Object..js (node:internal/modules/cjs/loader:2003:10)
+    at Module.load (node:internal/modules/cjs/loader:1594:32) {
+  Symbol(errorLabels): Set(0) {}
+}
