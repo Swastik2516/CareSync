@@ -17,7 +17,10 @@ const app = express();
 
 // ── Security middleware ───────────────────────────────────────────────────────
 app.use(helmet());
-app.use(cors({ origin: '*' }));
+app.use(cors({
+  origin: process.env.FRONTEND_URL || '*',
+  credentials: true,
+}));
 
 // ── CRITICAL: Webhook route registered BEFORE express.json() ─────────────────
 // The webhook controller applies express.raw() per-route to capture raw buffer.
@@ -45,10 +48,10 @@ app.use('/api/reports',      reportRoutes);
 app.get('/health', (_req, res) => res.status(200).send('CareSync API running safely'));
 
 // ── Database + Server ─────────────────────────────────────────────────────────
-const PORT = process.env.PORT || 5000;
+const PORT = Number(process.env.PORT) || 8080;
 mongoose.connect(process.env.MONGO_URI as string)
   .then(() => {
     console.log('MongoDB Connected');
-    app.listen(PORT, () => console.log(`CareSync Backend running on port ${PORT}`));
+    app.listen(PORT, '0.0.0.0', () => console.log(`CareSync Backend running on port ${PORT}`));
   })
   .catch((err) => console.error('DB Connection Error:', err));

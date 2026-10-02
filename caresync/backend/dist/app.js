@@ -19,7 +19,10 @@ const report_1 = __importDefault(require("./routes/report"));
 const app = (0, express_1.default)();
 // ── Security middleware ───────────────────────────────────────────────────────
 app.use((0, helmet_1.default)());
-app.use((0, cors_1.default)({ origin: '*' }));
+app.use((0, cors_1.default)({
+    origin: process.env.FRONTEND_URL || '*',
+    credentials: true,
+}));
 // ── CRITICAL: Webhook route registered BEFORE express.json() ─────────────────
 // The webhook controller applies express.raw() per-route to capture raw buffer.
 // If express.json() runs first globally, the raw body is lost and HMAC fails.
@@ -29,7 +32,7 @@ app.use(express_1.default.json());
 // ── Rate limiting ─────────────────────────────────────────────────────────────
 app.use('/api/', (0, express_rate_limit_1.default)({
     windowMs: 15 * 60 * 1000,
-    max: 100,
+    max: 1000,
     message: 'Too many requests, please try again later.',
 }));
 // ── API Routes ────────────────────────────────────────────────────────────────
@@ -41,10 +44,10 @@ app.use('/api/reports', report_1.default);
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get('/health', (_req, res) => res.status(200).send('CareSync API running safely'));
 // ── Database + Server ─────────────────────────────────────────────────────────
-const PORT = process.env.PORT || 5000;
+const PORT = Number(process.env.PORT) || 8080;
 mongoose_1.default.connect(process.env.MONGO_URI)
     .then(() => {
     console.log('MongoDB Connected');
-    app.listen(PORT, () => console.log(`CareSync Backend running on port ${PORT}`));
+    app.listen(PORT, '0.0.0.0', () => console.log(`CareSync Backend running on port ${PORT}`));
 })
     .catch((err) => console.error('DB Connection Error:', err));
