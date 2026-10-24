@@ -8,15 +8,15 @@ const HOURS = Array.from({ length: 10 }, (_, i) => `${(9 + i).toString().padStar
 
 export default function DoctorAvailabilityPage() {
   const router = useRouter()
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0])
+  const [date, setDate] = useState(() => new Date(new Date().getTime() + 5.5 * 60 * 60 * 1000).toISOString().split('T')[0])
   const [selected, setSelected] = useState<string[]>([])
   const [msg, setMsg] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const now = new Date()
-  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-  // Block only hours strictly before the current hour — current hour slot is still bookable
-  const currentHour = `${String(now.getHours()).padStart(2, '0')}:00`
+  // All time logic in IST (UTC+5:30)
+  const nowIST = new Date(new Date().getTime() + 5.5 * 60 * 60 * 1000)
+  const todayStr = nowIST.toISOString().split('T')[0]
+  const currentHour = `${String(nowIST.getUTCHours()).padStart(2, '0')}:00`
 
   useEffect(() => {
     if (!localStorage.getItem('token')) router.push('/login')
