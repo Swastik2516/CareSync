@@ -15,7 +15,8 @@ export default function DoctorAvailabilityPage() {
 
   const now = new Date()
   const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-  const currentHHMM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+  // Block only hours strictly before the current hour — current hour slot is still bookable
+  const currentHour = `${String(now.getHours()).padStart(2, '0')}:00`
 
   useEffect(() => {
     if (!localStorage.getItem('token')) router.push('/login')
@@ -24,7 +25,7 @@ export default function DoctorAvailabilityPage() {
   // Deselect past hours if user switches date to today
   useEffect(() => {
     if (date === todayStr) {
-      setSelected(prev => prev.filter(h => h > currentHHMM))
+      setSelected(prev => prev.filter(h => h >= currentHour))
     }
   }, [date])
 
@@ -63,7 +64,7 @@ export default function DoctorAvailabilityPage() {
           <label className="text-sm font-medium text-gray-700">Select Hours (9AM – 6PM)</label>
           <div className="flex flex-wrap gap-3 mt-3 mb-6">
             {HOURS.map(h => {
-              const isPassed = date === todayStr && h <= currentHHMM
+              const isPassed = date === todayStr && h < currentHour
               const isSelected = selected.includes(h)
               return (
                 <button key={h} disabled={isPassed} onClick={() => toggle(h)} type="button"
