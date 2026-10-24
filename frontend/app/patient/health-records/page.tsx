@@ -73,8 +73,8 @@ export default function PatientHealthRecordsPage() {
   const openFile = async (reportId: string) => {
     try {
       const res = await apiClient.get(`/reports/${reportId}/file`)
-      if (res.data?.fileData) {
-        window.open(res.data.fileData, '_blank')
+      if (res.data?.fileUrl) {
+        window.open(res.data.fileUrl, '_blank')
       }
     } catch (err: any) {
       setMessage(err.response?.data?.error ?? 'Could not open file')
