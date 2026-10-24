@@ -5,53 +5,55 @@ import Navbar from '@/components/Navbar'
 import apiClient from '@/lib/api'
 
 // 08:00–22:00, skip 13:00 (lunch break)
-const HOURS = Array.from({ length: 15 }, (_, i) => {
-  const h = 8 + i
-  return `${String(h).padStart(2, '0')}:00`
-}).filter(h => h !== '13:00')
+const HOURS = Array.from({ length: 15 }, (_, i) =>
+  `${String(8 + i).padStart(2, '0')}:00`
+).filter(h => h !== '13:00')
 
-function getISTInfo() {
+function getIST() {
   const now = new Date()
-  // Use Intl to get correct IST date and hour regardless of server/browser timezone
-  const istDate = new Intl.DateTimeFormat('en-CA', {
+  const todayStr = new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Kolkata',
     year: 'numeric', month: '2-digit', day: '2-digit',
-  }).format(now) // gives YYYY-MM-DD
-  const istHour = parseInt(
+  }).format(now)
+  const currentHour = parseInt(
     new Intl.DateTimeFormat('en-GB', {
-      timeZone: 'Asia/Kolkata',
-      hour: '2-digit', hour12: false,
+      timeZone: 'Asia/Kolkata', hour: '2-digit', hour12: false,
     }).format(now),
     10
   )
-  return { todayStr: istDate, currentHour: istHour }
+  return { todayStr, currentHour }
 }
 
 export default function DoctorAvailabilityPage() {
   const router = useRouter()
-  const { todayStr, currentHour } = getISTInfo()
 
-  const [date, setDate] = useState(todayStr)
+  // Re-compute IST every minute so slots auto-disable as time passes
+  const [ist, setIst] = useState(getIST)
+  const { todayStr, currentHour } = ist
+
+  const [date, setDate] = useState(() => getIST().todayStr)
   const [selected, setSelected] = useState<string[]>([])
   const [msg, setMsg] = useState('')
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     if (!localStorage.getItem('token')) router.push('/login')
+    // Refresh IST every 60 seconds
+    const timer = setInterval(() => setIst(getIST()), 60_000)
+    return () => clearInterval(timer)
   }, [])
 
-  // Drop any selected slots that became past when switching back to today
+  // Drop selected slots that became past when time ticks or date changes to today
   useEffect(() => {
     if (date === todayStr) {
       setSelected(prev => prev.filter(h => parseInt(h) >= currentHour))
     }
-  }, [date])
+  }, [date, currentHour, todayStr])
 
   const isPast = (h: string) => date === todayStr && parseInt(h) < currentHour
-  const isLunch = (h: string) => h === '13:00'
 
   const toggle = (h: string) => {
-    if (isPast(h) || isLunch(h)) return
+    if (isPast(h)) return
     setSelected(prev => prev.includes(h) ? prev.filter(x => x !== h) : [...prev, h])
   }
 
@@ -105,14 +107,18 @@ export default function DoctorAvailabilityPage() {
               )
             })}
 
-            {/* Lunch break visual indicator */}
+            {/* Lunch break indicator */}
             <div className="px-4 py-2 rounded-2xl border border-dashed border-orange-200 bg-orange-50 text-sm font-semibold text-orange-400 cursor-not-allowed">
               13:00
               <span className="block text-[10px] font-bold mt-0.5">Lunch</span>
             </div>
           </div>
 
-          {msg && <div className={`text-sm px-4 py-3 rounded-xl mb-4 ${msg.startsWith('✅') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>{msg}</div>}
+          {msg && (
+            <div className={`text-sm px-4 py-3 rounded-xl mb-4 ${msg.startsWith('✅') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
+              {msg}
+            </div>
+          )}
 
           <button onClick={handleSave} disabled={loading}
             className="w-full bg-indigo-600 text-white font-bold py-3 rounded-2xl hover:bg-indigo-700 disabled:opacity-60 transition">
