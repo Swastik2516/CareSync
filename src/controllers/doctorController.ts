@@ -73,6 +73,21 @@ export const getDoctorAvailability = async (req: Request, res: Response) => {
   }
 };
 
+export const updateDoctorProfile = async (req: AuthRequest, res: Response) => {
+  try {
+    const { specialization, hospital, experience, consultationFee, bio, profileImage } = req.body;
+    const profile = await DoctorProfile.findOneAndUpdate(
+      { userId: req.user?.userId },
+      { $set: { specialization, hospital, experience, consultationFee, bio, ...(profileImage && { profileImage }) } },
+      { new: true }
+    );
+    if (!profile) return res.status(404).json({ error: 'Doctor profile not found' });
+    return res.json({ message: 'Profile updated successfully', profile });
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
 export const setAvailability = async (req: AuthRequest, res: Response) => {
   try {
     const { date, slots } = req.body; // slots: [{ startTime, endTime }]

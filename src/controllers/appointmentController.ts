@@ -297,6 +297,14 @@ export const updateAppointmentStatus = async (req: AuthRequest, res: Response) =
     }
 
     appointment.status = status;
+    if (status === 'CANCELLED') {
+      const docName = (appointment as any).doctorId?.name || 'Doctor';
+      appointment.notifications.push({
+        message: `Your appointment on ${appointment.date} at ${appointment.timeSlot} has been cancelled by the doctor. Please reschedule at your convenience.`,
+        read: false,
+        createdAt: new Date()
+      });
+    }
     await appointment.save();
     return res.json(appointment);
   } catch (error: any) {
@@ -357,12 +365,12 @@ export const getPatientReportFileForDoctor = async (req: AuthRequest, res: Respo
     const report = await MedicalReport.findOne({ _id: req.params.reportId, patientId: req.params.patientId });
     if (!report) return res.status(404).json({ error: 'Report not found' });
     return res.json({
-      fileData: report.fileData,
-      fileType: report.fileType,
-      name: report.name,
-      healthCondition: report.healthCondition,
+      fileUrl:          report.fileUrl,
+      fileType:         report.fileType,
+      name:             report.name,
+      healthCondition:  report.healthCondition,
       prescribedTablets: report.prescribedTablets,
-      uploadedAt: report.uploadedAt,
+      uploadedAt:       report.uploadedAt,
     });
   } catch (error: any) {
     return res.status(500).json({ error: error.message });
