@@ -128,13 +128,13 @@ export default function DoctorAppointmentsPage() {
 
   const viewReport = async (report: any, patientId: string) => {
     if (reportFiles[report._id]) {
-      window.open(reportFiles[report._id].fileData, '_blank')
+      window.open(reportFiles[report._id].fileUrl, '_blank')
       return
     }
     try {
       const response = await apiClient.get(`/appointments/patient/${patientId}/reports/${report._id}/file`)
       setReportFiles(previous => ({ ...previous, [report._id]: response.data }))
-      window.open(response.data.fileData, '_blank')
+      window.open(response.data.fileUrl, '_blank')
     } catch (error: any) {
       alert(error.response?.data?.error ?? 'Could not open report')
     }

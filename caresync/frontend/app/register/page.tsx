@@ -1,5 +1,5 @@
 'use client'
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Eye, EyeOff, Check, X } from 'lucide-react'
@@ -24,6 +24,7 @@ function getStrength(password: string) {
 
 export default function RegisterPage() {
   const router = useRouter()
+  const [doctorSlotOpen, setDoctorSlotOpen] = useState(false)
   const [role, setRole] = useState<'PATIENT' | 'DOCTOR'>('PATIENT')
   const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', dateOfBirth: '1990-01-01', gender: 'Male', specialization: '', hospital: '', experience: '', consultationFee: '', bio: '' })
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -31,6 +32,13 @@ export default function RegisterPage() {
   const [showConfirm, setShowConfirm] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  // Check if doctor slot is open (no doctor registered yet)
+  useEffect(() => {
+    apiClient.get('/auth/doctor-slot')
+      .then(res => setDoctorSlotOpen(res.data.open))
+      .catch(() => setDoctorSlotOpen(false))
+  }, [])
 
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setForm(f => ({ ...f, [k]: e.target.value }))
@@ -70,14 +78,18 @@ export default function RegisterPage() {
 
         {error && <div className="bg-red-50 text-red-600 text-sm px-4 py-3 rounded-xl mb-4">{error}</div>}
 
-        {/* Role Toggle */}
+        {/* Role Toggle — only show DOCTOR if slot is open */}
         <div className="flex bg-gray-100 rounded-2xl p-1 mb-5">
-          {(['PATIENT', 'DOCTOR'] as const).map(r => (
-            <button key={r} onClick={() => setRole(r)} type="button"
-              className={`flex-1 py-2 rounded-xl text-sm font-semibold transition ${role === r ? 'bg-indigo-600 text-white' : 'text-gray-600'}`}>
-              {r}
+          <button onClick={() => setRole('PATIENT')} type="button"
+            className={`flex-1 py-2 rounded-xl text-sm font-semibold transition ${role === 'PATIENT' ? 'bg-indigo-600 text-white' : 'text-gray-600'}`}>
+            PATIENT
+          </button>
+          {doctorSlotOpen && (
+            <button onClick={() => setRole('DOCTOR')} type="button"
+              className={`flex-1 py-2 rounded-xl text-sm font-semibold transition ${role === 'DOCTOR' ? 'bg-indigo-600 text-white' : 'text-gray-600'}`}>
+              DOCTOR
             </button>
-          ))}
+          )}
         </div>
 
         <form onSubmit={handleRegister} className="space-y-3">

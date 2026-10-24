@@ -62,6 +62,7 @@ export default function Navbar() {
           <Link href="/patient/doctors" className="text-sm text-gray-600 hover:text-indigo-600 font-medium">Find Doctors</Link>
           <Link href="/patient/appointments" className="text-sm text-gray-600 hover:text-indigo-600 font-medium">My Appointments</Link>
           <Link href="/patient/health-records" className="text-sm text-gray-600 hover:text-indigo-600 font-medium">Health Records</Link>
+          <Link href="/patient/profile" className="text-sm text-gray-600 hover:text-indigo-600 font-medium">Profile</Link>
 
           {/* Notification Bell Icon */}
           <div className="relative">
@@ -139,6 +140,7 @@ export default function Navbar() {
         {role === 'DOCTOR' && <>
           <Link href="/doctor/appointments" className="text-sm text-gray-600 hover:text-indigo-600 font-medium">Appointments</Link>
           <Link href="/doctor/availability" className="text-sm text-gray-600 hover:text-indigo-600 font-medium">Availability</Link>
+          <Link href="/doctor/profile" className="text-sm text-gray-600 hover:text-indigo-600 font-medium">Profile</Link>
         </>}
         <div className="flex items-center gap-3">
           <span className="text-sm text-gray-500">{name}</span>

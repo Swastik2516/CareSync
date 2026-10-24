@@ -5,12 +5,22 @@ import crypto from 'crypto';
 import { User } from '../models/User';
 import { DoctorProfile } from '../models/DoctorProfile';
 import { PatientProfile } from '../models/PatientProfile';
+import { Appointment } from '../models/Appointment';
+import { MedicalReport } from '../models/MedicalReport';
 import { OTP } from '../models/OTP';
 import { sendOTPEmail } from '../config/mailer';
+import { AuthRequest } from '../middleware/auth';
 
 export const register = async (req: Request, res: Response) => {
   try {
     const { name, email, phone, password, role, ...profileData } = req.body;
+
+    // Block doctor registration if one already exists
+    if (role === 'DOCTOR') {
+      const doctorExists = await User.findOne({ role: 'DOCTOR' });
+      if (doctorExists) return res.status(403).json({ error: 'Doctor registration is closed.' });
+    }
+
     const existing = await User.findOne({ email });
     if (existing) return res.status(409).json({ error: 'Email already registered' });
 
@@ -51,6 +61,39 @@ export const login = async (req: Request, res: Response) => {
     );
 
     return res.json({ token, role: user.role, name: user.name });
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+// ─── Doctor Slot Check ──────────────────────────────────────────────────────────
+export const doctorSlot = async (_req: Request, res: Response) => {
+  try {
+    const doctorExists = await User.findOne({ role: 'DOCTOR' });
+    return res.json({ open: !doctorExists });
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+// ─── Delete Account ───────────────────────────────────────────────────────────
+export const deleteAccount = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.userId;
+    const role   = req.user?.role;
+
+    // Delete role-specific profile
+    if (role === 'DOCTOR') {
+      await DoctorProfile.deleteOne({ userId });
+      await Appointment.deleteMany({ doctorId: userId });
+    } else {
+      await PatientProfile.deleteOne({ userId });
+      await Appointment.deleteMany({ patientId: userId });
+      await MedicalReport.deleteMany({ patientId: userId });
+    }
+
+    await User.deleteOne({ _id: userId });
+    return res.json({ message: 'Account deleted successfully' });
   } catch (error: any) {
     return res.status(500).json({ error: error.message });
   }
