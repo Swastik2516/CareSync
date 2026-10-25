@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import apiClient from '@/lib/api'
-import { CalendarDays, FileText, Save, Users, CheckCircle, Clock, DollarSign, AlertCircle, X, CreditCard } from 'lucide-react'
+import { CalendarDays, FileText, Save, Users, Clock, DollarSign, AlertCircle, X, CreditCard, Search } from 'lucide-react'
 
 const STATUS_STYLES: Record<string, string> = {
   CONFIRMED: 'bg-green-100 text-green-700 border border-green-200',
@@ -32,6 +32,13 @@ export default function DoctorAppointmentsPage() {
   const [earlyReason, setEarlyReason]             = useState('')
   const [earlySubmitting, setEarlySubmitting]     = useState(false)
   const [earlyError, setEarlyError]               = useState('')
+
+  // History filters
+  const [historyDate, setHistoryDate]       = useState('')
+  const [historySearch, setHistorySearch]   = useState('')
+  // Payment mode modal
+  const [payModeAppt, setPayModeAppt]       = useState<any>(null)
+  const [payMode, setPayMode]               = useState('CASH')
 
   const fetchAllAppointments = async () => {
     setLoading(true)
@@ -96,9 +103,10 @@ export default function DoctorAppointmentsPage() {
     }
   }
 
-  const markPaymentPaid = async (id: string) => {
+  const markPaymentPaid = async (id: string, mode: string) => {
     try {
-      await apiClient.patch(`/appointments/${id}/payment-status`)
+      await apiClient.patch(`/appointments/${id}/payment-status`, { paymentMode: mode })
+      setPayModeAppt(null)
       fetchAllAppointments()
     } catch (err: any) {
       alert(err.response?.data?.error ?? 'Failed to update payment status')
@@ -163,7 +171,25 @@ export default function DoctorAppointmentsPage() {
     .filter(a => a.paymentStatus === 'PAID')
     .reduce((sum, a) => sum + (a.amount || 0), 0)
 
-  const displayList = activeTab === 'ACTIVE' ? activeAppointments : historyAppointments
+  // Filtered history
+  const filteredHistory = historyAppointments.filter(a => {
+    const matchDate = historyDate ? a.date === historyDate : true
+    const matchSearch = historySearch
+      ? (a.patientId?.name ?? '').toLowerCase().includes(historySearch.toLowerCase())
+      : true
+    return matchDate && matchSearch
+  })
+
+  const historyCompleted = filteredHistory.filter(a => a.status === 'COMPLETED')
+  const historyRevenue   = filteredHistory.filter(a => a.paymentStatus === 'PAID').reduce((s, a) => s + (a.amount || 0), 0)
+  const modeCount = filteredHistory.reduce((acc: Record<string, number>, a) => {
+    if (a.paymentStatus === 'PAID' && a.paymentMode) {
+      acc[a.paymentMode] = (acc[a.paymentMode] || 0) + 1
+    }
+    return acc
+  }, {})
+
+  const displayList = activeTab === 'ACTIVE' ? activeAppointments : filteredHistory
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -228,13 +254,57 @@ export default function DoctorAppointmentsPage() {
 
         {loading ? (
           <div className="text-center py-20 text-gray-400">Loading appointments...</div>
-        ) : displayList.length === 0 ? (
-          <div className="text-center py-20 text-gray-400">
-            {activeTab === 'ACTIVE' ? 'No active appointments scheduled.' : 'No appointment history found.'}
-          </div>
         ) : (
           <div className="grid gap-4">
-            {displayList.map((a: any) => (
+            {/* History filters + summary */}
+            {activeTab === 'HISTORY' && (
+              <div className="bg-white border border-gray-100 rounded-3xl p-5 shadow-sm space-y-4">
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="flex-1">
+                    <label className="text-xs font-bold text-gray-500 mb-1 block">Filter by Date</label>
+                    <input type="date" value={historyDate} onChange={e => setHistoryDate(e.target.value)}
+                      className="w-full border border-gray-200 rounded-2xl px-4 py-2.5 text-sm outline-none focus:border-indigo-400" />
+                  </div>
+                  <div className="flex-1">
+                    <label className="text-xs font-bold text-gray-500 mb-1 block">Search Patient</label>
+                    <div className="relative">
+                      <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                      <input type="text" value={historySearch} onChange={e => setHistorySearch(e.target.value)}
+                        placeholder="Patient name..."
+                        className="w-full border border-gray-200 rounded-2xl pl-8 pr-4 py-2.5 text-sm outline-none focus:border-indigo-400" />
+                    </div>
+                  </div>
+                  {(historyDate || historySearch) && (
+                    <button onClick={() => { setHistoryDate(''); setHistorySearch('') }}
+                      className="self-end text-xs text-gray-400 hover:text-gray-600 px-3 py-2.5 border border-gray-200 rounded-2xl">
+                      Clear
+                    </button>
+                  )}
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2 border-t border-gray-100">
+                  <div className="bg-blue-50 rounded-2xl p-3 text-center">
+                    <p className="text-xs text-blue-500 font-semibold">Patients</p>
+                    <p className="text-xl font-extrabold text-blue-700">{historyCompleted.length}</p>
+                  </div>
+                  <div className="bg-emerald-50 rounded-2xl p-3 text-center">
+                    <p className="text-xs text-emerald-500 font-semibold">Revenue</p>
+                    <p className="text-xl font-extrabold text-emerald-700">₹{historyRevenue}</p>
+                  </div>
+                  {Object.entries(modeCount).map(([mode, count]) => (
+                    <div key={mode} className="bg-indigo-50 rounded-2xl p-3 text-center">
+                      <p className="text-xs text-indigo-500 font-semibold">{mode}</p>
+                      <p className="text-xl font-extrabold text-indigo-700">{count as number}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {displayList.length === 0 ? (
+              <div className="text-center py-16 text-gray-400">
+                {activeTab === 'ACTIVE' ? 'No active appointments scheduled.' : 'No records found.'}
+              </div>
+            ) : displayList.map((a: any) => (
               <div key={a._id} className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm hover:shadow-md transition">
                 <div className="flex justify-between items-start gap-4">
                   <div>

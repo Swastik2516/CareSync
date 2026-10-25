@@ -8,8 +8,9 @@ import { Camera, Save, Trash2, X } from 'lucide-react'
 export default function DoctorProfilePage() {
   const router = useRouter()
   const [form, setForm] = useState({
-    specialization: '', hospital: '', experience: '', consultationFee: '', bio: '', profileImage: ''
+    specialization: '', hospital: '', experience: '', consultationFee: '', bio: ''
   })
+  const [profileImage, setProfileImage] = useState('')
   const [loading, setLoading]         = useState(true)
   const [saving, setSaving]           = useState(false)
   const [message, setMessage]         = useState('')
@@ -32,8 +33,8 @@ export default function DoctorProfilePage() {
             experience:      String(d.experience      ?? ''),
             consultationFee: String(d.consultationFee ?? ''),
             bio:             d.bio             ?? '',
-            profileImage:    d.profileImage    ?? '',
           })
+          setProfileImage(d.profileImage ?? '')
         })
         .catch(() => setMessage('Could not load profile'))
         .finally(() => setLoading(false))
@@ -47,20 +48,24 @@ export default function DoctorProfilePage() {
     if (!file) return
     setUploadingImage(true)
     setMessage('')
-    try {
-      const reader = new FileReader()
-      reader.onload = async () => {
+    const reader = new FileReader()
+    reader.onload = async () => {
+      try {
         const base64 = reader.result as string
         const res = await apiClient.post('/doctors/profile-image', { fileData: base64, fileType: file.type })
-        setForm(p => ({ ...p, profileImage: res.data.profileImage }))
+        setProfileImage(res.data.profileImage)
         setMessage('✅ Profile photo updated!')
+      } catch (err: any) {
+        setMessage(`❌ ${err.response?.data?.error ?? 'Image upload failed'}`)
+      } finally {
         setUploadingImage(false)
       }
-      reader.readAsDataURL(file)
-    } catch (err: any) {
-      setMessage(`❌ ${err.response?.data?.error ?? 'Image upload failed'}`)
+    }
+    reader.onerror = () => {
+      setMessage('❌ Failed to read image file')
       setUploadingImage(false)
     }
+    reader.readAsDataURL(file)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -133,8 +138,8 @@ export default function DoctorProfilePage() {
                 className="relative w-24 h-24 rounded-full cursor-pointer group"
                 onClick={() => fileInputRef.current?.click()}
               >
-                {form.profileImage ? (
-                  <img src={form.profileImage} alt="Profile" className="w-24 h-24 rounded-full object-cover border-4 border-indigo-100" />
+                {profileImage ? (
+                  <img src={profileImage} alt="Profile" className="w-24 h-24 rounded-full object-cover border-4 border-indigo-100" />
                 ) : (
                   <div className="w-24 h-24 rounded-full bg-indigo-100 flex items-center justify-center border-4 border-indigo-200">
                     <Camera size={32} className="text-indigo-400" />
@@ -154,7 +159,6 @@ export default function DoctorProfilePage() {
                 ref={fileInputRef}
                 type="file"
                 accept="image/*"
-                capture="environment"
                 className="hidden"
                 onChange={handleImageChange}
               />
