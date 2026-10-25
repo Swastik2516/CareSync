@@ -338,7 +338,7 @@ export default function DoctorAppointmentsPage() {
                   <div className="flex items-center gap-2">
                     {a.paymentStatus !== 'PAID' && (
                       <button
-                        onClick={() => markPaymentPaid(a._id)}
+                        onClick={() => setPayModeAppt(a)}
                         className="text-xs font-bold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-xl border border-emerald-200 transition"
                       >
                         Mark Paid at Clinic
@@ -500,6 +500,35 @@ export default function DoctorAppointmentsPage() {
             >
               {earlySubmitting ? 'Submitting...' : 'Confirm Early Completion'}
             </button>
+          </div>
+        </div>
+      )}
+      {/* Payment Mode Modal */}
+      {payModeAppt && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl">
+            <h2 className="text-lg font-bold text-gray-900 mb-1">Select Payment Mode</h2>
+            <p className="text-xs text-gray-500 mb-4">{payModeAppt.patientId?.name} — {payModeAppt.date}</p>
+            <div className="grid grid-cols-2 gap-3 mb-5">
+              {['CASH', 'UPI', 'CARD', 'ONLINE'].map(m => (
+                <button key={m} onClick={() => setPayMode(m)}
+                  className={`py-3 rounded-2xl border text-sm font-bold transition ${
+                    payMode === m ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-gray-700 border-gray-200 hover:border-emerald-400'
+                  }`}>
+                  {m}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setPayModeAppt(null)}
+                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-3 rounded-2xl transition">
+                Cancel
+              </button>
+              <button onClick={() => markPaymentPaid(payModeAppt._id, payMode)}
+                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-2xl transition">
+                Confirm Paid
+              </button>
+            </div>
           </div>
         </div>
       )}
