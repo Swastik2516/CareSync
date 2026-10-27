@@ -4,6 +4,7 @@ import { AuthRequest } from '../middleware/auth';
 import { Appointment } from '../models/Appointment';
 import { Availability } from '../models/Availability';
 import { MedicalReport } from '../models/MedicalReport';
+import { cleanPastAvailability } from './doctorController';
 
 const ACTIVE   = ['PENDING', 'CONFIRMED'];
 const TERMINAL = ['COMPLETED', 'CANCELLED', 'MISSED', 'RESCHEDULED'];
@@ -12,8 +13,12 @@ const TERMINAL = ['COMPLETED', 'CANCELLED', 'MISSED', 'RESCHEDULED'];
 export const autoExpireAppointments = async () => {
   try {
     const now = new Date();
-    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    const currentHHMM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const todayStr = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit',
+    }).format(now);
+    const currentHHMM = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: false,
+    }).format(now).replace(' ', ':');
 
     const activeAppts = await Appointment.find({
       status: { $in: ACTIVE }
@@ -53,23 +58,34 @@ export const bookAppointment = async (req: AuthRequest, res: Response) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
-    const { doctorId, date, timeSlot, reason } = req.body;
+    const { doctorId: doctorIdRaw, date, timeSlot, reason } = req.body;
     const patientId = req.user?.userId;
 
+    if (!mongoose.Types.ObjectId.isValid(doctorIdRaw)) {
+      await session.abortTransaction();
+      return res.status(400).json({ error: 'Invalid doctor ID.' });
+    }
+    const doctorId = new mongoose.Types.ObjectId(doctorIdRaw);
+
     const now = new Date();
-    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    const currentHHMM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const todayStr = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit',
+    }).format(now);
+    const currentHHMM = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: false,
+    }).format(now).replace(' ', ':');
 
     if (date < todayStr) {
       await session.abortTransaction();
       return res.status(400).json({ error: 'Cannot book appointments for past dates.' });
     }
 
-    if (date === todayStr && timeSlot <= currentHHMM) {
+    if (date === todayStr && timeSlot < currentHHMM) {
       await session.abortTransaction();
       return res.status(400).json({ error: 'This time slot has already passed. Please select a future time slot.' });
     }
 
+    await cleanPastAvailability();
     const availability = await Availability.findOne({ doctorId, date, startTime: timeSlot }).session(session);
     if (!availability) {
       await session.abortTransaction();
@@ -115,8 +131,12 @@ export const rescheduleAppointment = async (req: AuthRequest, res: Response) => 
     }
 
     const now = new Date();
-    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    const currentHHMM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const todayStr = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit',
+    }).format(now);
+    const currentHHMM = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: false,
+    }).format(now).replace(' ', ':');
 
     if (newDate < todayStr) {
       await session.abortTransaction();
