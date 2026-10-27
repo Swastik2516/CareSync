@@ -4,6 +4,35 @@ import { DoctorProfile } from '../models/DoctorProfile';
 import { Availability } from '../models/Availability';
 import { Appointment } from '../models/Appointment';
 import { AuthRequest } from '../middleware/auth';
+import cloudinary from '../config/cloudinary';
+
+// Returns current date string and HH:MM time string in IST
+function istNow() {
+  const now = new Date();
+  const todayStr = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(now);
+  const currentHHMM = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: false,
+  }).format(now).replace(' ', ':');
+  return { todayStr, currentHHMM };
+}
+
+// Deletes all availability slots whose date is before today,
+// or whose startTime has already passed on today
+export const cleanPastAvailability = async () => {
+  try {
+    const { todayStr, currentHHMM } = istNow();
+    await Availability.deleteMany({
+      $or: [
+        { date: { $lt: todayStr } },
+        { date: todayStr, startTime: { $lte: currentHHMM } }
+      ]
+    });
+  } catch (err) {
+    console.error('cleanPastAvailability error:', err);
+  }
+};
 
 export const getAllDoctors = async (_req: Request, res: Response) => {
   try {
@@ -34,9 +63,8 @@ export const getDoctorAvailability = async (req: Request, res: Response) => {
       return res.json([]);
     }
 
-    const now = new Date();
-    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    const currentHHMM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    await cleanPastAvailability();
+    const { todayStr, currentHHMM } = istNow();
 
     const reqDate = date as string;
     if (reqDate < todayStr) {
@@ -49,6 +77,7 @@ export const getDoctorAvailability = async (req: Request, res: Response) => {
     });
 
     const validSlots = slots.filter(slot => {
+      if (slot.startTime === '13:00') return false; // lunch break
       if (reqDate === todayStr) {
         return slot.startTime > currentHHMM;
       }
@@ -75,14 +104,34 @@ export const getDoctorAvailability = async (req: Request, res: Response) => {
 
 export const updateDoctorProfile = async (req: AuthRequest, res: Response) => {
   try {
-    const { specialization, hospital, experience, consultationFee, bio, profileImage } = req.body;
+    const { specialization, hospital, experience, consultationFee, bio } = req.body;
     const profile = await DoctorProfile.findOneAndUpdate(
       { userId: req.user?.userId },
-      { $set: { specialization, hospital, experience, consultationFee, bio, ...(profileImage && { profileImage }) } },
+      { $set: { specialization, hospital, experience, consultationFee, bio } },
       { new: true }
     );
     if (!profile) return res.status(404).json({ error: 'Doctor profile not found' });
     return res.json({ message: 'Profile updated successfully', profile });
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+export const uploadProfileImage = async (req: AuthRequest, res: Response) => {
+  try {
+    const { fileData, fileType } = req.body;
+    if (!fileData || !fileType) return res.status(400).json({ error: 'fileData and fileType are required' });
+    const uploaded = await cloudinary.uploader.upload(fileData, {
+      folder: 'caresync/profiles',
+      resource_type: 'image',
+    });
+    const profile = await DoctorProfile.findOneAndUpdate(
+      { userId: req.user?.userId },
+      { $set: { profileImage: uploaded.secure_url } },
+      { new: true }
+    );
+    if (!profile) return res.status(404).json({ error: 'Doctor profile not found' });
+    return res.json({ profileImage: uploaded.secure_url });
   } catch (error: any) {
     return res.status(500).json({ error: error.message });
   }
@@ -93,15 +142,15 @@ export const setAvailability = async (req: AuthRequest, res: Response) => {
     const { date, slots } = req.body; // slots: [{ startTime, endTime }]
     const doctorId = req.user?.userId;
 
-    const now = new Date();
-    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    const currentHHMM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    await cleanPastAvailability();
+    const { todayStr, currentHHMM } = istNow();
 
     if (date < todayStr) {
       return res.status(400).json({ error: 'Cannot set availability for past dates.' });
     }
 
     const validSlots = (slots || []).filter((s: { startTime: string }) => {
+      if (s.startTime === '13:00') return false; // lunch break
       if (date === todayStr) {
         return s.startTime > currentHHMM;
       }
