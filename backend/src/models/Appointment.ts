@@ -30,7 +30,7 @@ const appointmentSchema = new Schema({
   // ── Payment fields ────────────────────────────────────────────────────────
   amount:            { type: Number, default: 0 },
   paymentStatus:     { type: String, enum: ['PENDING', 'PAID', 'FAILED', 'CANCELLED'], default: 'PENDING' },
-  paymentMode:       { type: String, enum: ['ONLINE', 'CASH', 'UPI', 'CARD', null], default: null },
+  paymentMode:       { type: String, enum: ['ONLINE', 'CASH', 'UPI', 'CARD'], default: undefined },
   razorpayOrderId:   { type: String, default: null },
   razorpayPaymentId: { type: String, default: null },
   paidAt:            { type: Date, default: null },
