@@ -143,7 +143,7 @@ export const rescheduleAppointment = async (req: AuthRequest, res: Response) => 
       return res.status(400).json({ error: 'Cannot reschedule to a past date.' });
     }
 
-    if (newDate === todayStr && newTimeSlot <= currentHHMM) {
+    if (newDate === todayStr && newTimeSlot < currentHHMM) {
       await session.abortTransaction();
       return res.status(400).json({ error: 'This time slot has already passed. Please select a future time slot.' });
     }
