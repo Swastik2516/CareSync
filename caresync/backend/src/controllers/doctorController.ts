@@ -6,7 +6,7 @@ import { Appointment } from '../models/Appointment';
 import { AuthRequest } from '../middleware/auth';
 import cloudinary from '../config/cloudinary';
 
-// Returns current date string and HH:MM time string in IST
+// Returns current date string and HH:MM time in IST
 function istNow() {
   const now = new Date();
   const todayStr = new Intl.DateTimeFormat('en-CA', {
@@ -18,8 +18,7 @@ function istNow() {
   return { todayStr, currentHHMM };
 }
 
-// Deletes all availability slots whose date is before today,
-// or whose startTime has already passed on today
+// Deletes all past availability slots from DB
 export const cleanPastAvailability = async () => {
   try {
     const { todayStr, currentHHMM } = istNow();
@@ -77,7 +76,7 @@ export const getDoctorAvailability = async (req: Request, res: Response) => {
     });
 
     const validSlots = slots.filter(slot => {
-      if (slot.startTime === '13:00') return false; // lunch break
+      if (slot.startTime === '13:00') return false;
       if (reqDate === todayStr) {
         return slot.startTime > currentHHMM;
       }
@@ -150,7 +149,7 @@ export const setAvailability = async (req: AuthRequest, res: Response) => {
     }
 
     const validSlots = (slots || []).filter((s: { startTime: string }) => {
-      if (s.startTime === '13:00') return false; // lunch break
+      if (s.startTime === '13:00') return false;
       if (date === todayStr) {
         return s.startTime > currentHHMM;
       }
