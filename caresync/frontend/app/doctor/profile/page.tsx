@@ -1,20 +1,23 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import apiClient from '@/lib/api'
-import { Save, Trash2, X } from 'lucide-react'
+import { Camera, Save, Trash2, X } from 'lucide-react'
 
 export default function DoctorProfilePage() {
   const router = useRouter()
   const [form, setForm] = useState({
-    specialization: '', hospital: '', experience: '', consultationFee: '', bio: '', profileImage: ''
+    specialization: '', hospital: '', experience: '', consultationFee: '', bio: ''
   })
+  const [profileImage, setProfileImage] = useState('')
   const [loading, setLoading]         = useState(true)
   const [saving, setSaving]           = useState(false)
   const [message, setMessage]         = useState('')
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleting, setDeleting]       = useState(false)
+  const [uploadingImage, setUploadingImage] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const token = localStorage.getItem('token')
@@ -30,8 +33,8 @@ export default function DoctorProfilePage() {
             experience:      String(d.experience      ?? ''),
             consultationFee: String(d.consultationFee ?? ''),
             bio:             d.bio             ?? '',
-            profileImage:    d.profileImage    ?? '',
           })
+          setProfileImage(d.profileImage ?? '')
         })
         .catch(() => setMessage('Could not load profile'))
         .finally(() => setLoading(false))
@@ -39,6 +42,31 @@ export default function DoctorProfilePage() {
       router.push('/login')
     }
   }, [])
+
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploadingImage(true)
+    setMessage('')
+    const reader = new FileReader()
+    reader.onload = async () => {
+      try {
+        const base64 = reader.result as string
+        const res = await apiClient.post('/doctors/profile-image', { fileData: base64, fileType: file.type })
+        setProfileImage(res.data.profileImage)
+        setMessage('✅ Profile photo updated!')
+      } catch (err: any) {
+        setMessage(`❌ ${err.response?.data?.error ?? 'Image upload failed'}`)
+      } finally {
+        setUploadingImage(false)
+      }
+    }
+    reader.onerror = () => {
+      setMessage('❌ Failed to read image file')
+      setUploadingImage(false)
+    }
+    reader.readAsDataURL(file)
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -103,12 +131,44 @@ export default function DoctorProfilePage() {
           <div className="text-center py-20 text-gray-400">Loading...</div>
         ) : (
           <form onSubmit={handleSubmit} className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm space-y-4">
+
+            {/* Profile Photo */}
+            <div className="flex flex-col items-center pb-2">
+              <div
+                className="relative w-24 h-24 rounded-full cursor-pointer group"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {profileImage ? (
+                  <img src={profileImage} alt="Profile" className="w-24 h-24 rounded-full object-cover border-4 border-indigo-100" />
+                ) : (
+                  <div className="w-24 h-24 rounded-full bg-indigo-100 flex items-center justify-center border-4 border-indigo-200">
+                    <Camera size={32} className="text-indigo-400" />
+                  </div>
+                )}
+                <div className="absolute inset-0 rounded-full bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+                  <Camera size={20} className="text-white" />
+                </div>
+                {uploadingImage && (
+                  <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center">
+                    <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  </div>
+                )}
+              </div>
+              <p className="text-xs text-gray-400 mt-2">Tap to change photo</p>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleImageChange}
+              />
+            </div>
+
             {field('Specialization', 'specialization')}
             {field('Hospital / Clinic', 'hospital')}
             {field('Years of Experience', 'experience', 'number')}
             {field('Consultation Fee (₹)', 'consultationFee', 'number')}
             {field('Bio', 'bio', 'text', 3)}
-            {field('Profile Image URL (optional)', 'profileImage')}
 
             {message && (
               <p className={`text-xs px-4 py-3 rounded-xl ${message.startsWith('✅') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>

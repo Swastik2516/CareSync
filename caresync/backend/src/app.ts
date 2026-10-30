@@ -28,7 +28,7 @@ app.use(cors({
 app.use('/api/webhooks', webhookRoutes);
 
 // ── Global JSON parser (all other routes) ────────────────────────────────────
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 // ── Rate limiting ─────────────────────────────────────────────────────────────
 app.use('/api/', rateLimit({
