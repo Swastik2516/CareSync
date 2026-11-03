@@ -3,27 +3,15 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import {
-  LayoutDashboard, Stethoscope, CalendarDays, FileText, User,
-  Salad, Moon, Dumbbell, Brain, HelpCircle, LogOut, Bell, Menu, X
+  Stethoscope, CalendarDays, FileText, User,
+  LogOut, Bell, Menu
 } from 'lucide-react'
 
 const MAIN_NAV = [
-  { label: 'Dashboard',       href: '/patient/doctors',          icon: LayoutDashboard },
   { label: 'Find Doctors',    href: '/patient/doctors',          icon: Stethoscope },
   { label: 'My Appointments', href: '/patient/appointments',     icon: CalendarDays },
   { label: 'Health Records',  href: '/patient/health-records',   icon: FileText },
   { label: 'Profile',         href: '/patient/profile',          icon: User },
-]
-
-const WELLNESS_NAV = [
-  { label: 'Food',            href: '/patient/wellness/food',    icon: Salad },
-  { label: 'Sleep',           href: '/patient/wellness/sleep',   icon: Moon },
-  { label: 'Exercise',        href: '/patient/wellness/exercise',icon: Dumbbell },
-  { label: 'Mental Health',   href: '/patient/wellness/mental',  icon: Brain },
-]
-
-const SUPPORT_NAV = [
-  { label: 'Help & Support',  href: '/patient/wellness/help',    icon: HelpCircle },
 ]
 
 export default function PatientSidebar({ children }: { children: React.ReactNode }) {
@@ -80,10 +68,6 @@ export default function PatientSidebar({ children }: { children: React.ReactNode
       {/* Nav */}
       <nav className="flex-1 px-2 py-2 overflow-y-auto">
         <NavSection title="MAIN MENU" items={MAIN_NAV} />
-        <hr className="border-[#1f1f1f] my-3" />
-        <NavSection title="HEALTH & WELLNESS" items={WELLNESS_NAV} />
-        <hr className="border-[#1f1f1f] my-3" />
-        <NavSection title="SUPPORT" items={SUPPORT_NAV} />
       </nav>
 
       {/* Logout */}
@@ -124,7 +108,7 @@ export default function PatientSidebar({ children }: { children: React.ReactNode
             </button>
             <div>
               <h1 className="text-base font-bold text-gray-900 leading-tight">
-                {[...MAIN_NAV, ...WELLNESS_NAV, ...SUPPORT_NAV].find(n => pathname.startsWith(n.href))?.label ?? 'Dashboard'}
+                {MAIN_NAV.find(n => pathname.startsWith(n.href))?.label ?? 'Dashboard'}
               </h1>
               <p className="text-xs text-gray-400">Welcome, {name}</p>
             </div>

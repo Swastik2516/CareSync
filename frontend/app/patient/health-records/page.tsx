@@ -2,7 +2,7 @@
 
 import { ChangeEvent, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Navbar from '@/components/Navbar'
+import PatientSidebar from '@/components/PatientSidebar'
 import apiClient from '@/lib/api'
 import { CalendarDays, FileImage, FileText, Upload, Camera, ExternalLink, Trash2 } from 'lucide-react'
 
@@ -82,9 +82,8 @@ export default function PatientHealthRecordsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <Navbar />
-      <main className="max-w-5xl mx-auto px-6 py-8">
+    <PatientSidebar>
+      <div className="max-w-5xl mx-auto">
         <div className="mb-7">
           <p className="text-sm font-semibold text-indigo-600">Personal Health Record</p>
           <h1 className="text-3xl font-bold text-gray-900 mt-1">Reports & Prescriptions</h1>
@@ -180,7 +179,7 @@ export default function PatientHealthRecordsPage() {
             )}
           </section>
         </div>
-      </main>
-    </div>
+      </div>
+    </PatientSidebar>
   )
 }

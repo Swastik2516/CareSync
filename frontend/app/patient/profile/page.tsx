@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Navbar from '@/components/Navbar'
+import PatientSidebar from '@/components/PatientSidebar'
 import apiClient from '@/lib/api'
 import { Trash2, X } from 'lucide-react'
 
@@ -33,9 +33,8 @@ export default function PatientProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <Navbar />
-      <div className="max-w-xl mx-auto px-6 py-8">
+    <PatientSidebar>
+      <div className="max-w-xl mx-auto">
         <h1 className="text-2xl font-bold text-gray-900 mb-6">My Profile</h1>
 
         <div className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm space-y-4">
@@ -100,6 +99,6 @@ export default function PatientProfilePage() {
           </div>
         </div>
       )}
-    </div>
+    </PatientSidebar>
   )
 }
