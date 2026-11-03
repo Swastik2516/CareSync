@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Navbar from '@/components/Navbar'
+import DoctorSidebar from '@/components/DoctorSidebar'
 import apiClient from '@/lib/api'
 
 // 08:00–22:00, skip 13:00 (lunch break)
@@ -15,13 +15,10 @@ function getIST() {
     timeZone: 'Asia/Kolkata',
     year: 'numeric', month: '2-digit', day: '2-digit',
   }).format(now)
-  const currentHour = parseInt(
-    new Intl.DateTimeFormat('en-GB', {
-      timeZone: 'Asia/Kolkata', hour: '2-digit', hour12: false,
-    }).format(now),
-    10
-  )
-  return { todayStr, currentHour }
+  const currentHHMM = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: false,
+  }).format(now).replace(' ', ':')
+  return { todayStr, currentHHMM }
 }
 
 export default function DoctorAvailabilityPage() {
@@ -29,7 +26,7 @@ export default function DoctorAvailabilityPage() {
 
   // Re-compute IST every minute so slots auto-disable as time passes
   const [ist, setIst] = useState(getIST)
-  const { todayStr, currentHour } = ist
+  const { todayStr, currentHHMM } = ist
 
   const [date, setDate] = useState(() => getIST().todayStr)
   const [selected, setSelected] = useState<string[]>([])
@@ -46,11 +43,11 @@ export default function DoctorAvailabilityPage() {
   // Drop selected slots that became past when time ticks or date changes to today
   useEffect(() => {
     if (date === todayStr) {
-      setSelected(prev => prev.filter(h => parseInt(h) >= currentHour))
+      setSelected(prev => prev.filter(h => h > currentHHMM))
     }
-  }, [date, currentHour, todayStr])
+  }, [date, currentHHMM, todayStr])
 
-  const isPast = (h: string) => date === todayStr && parseInt(h) < currentHour
+  const isPast = (h: string) => date === todayStr && h <= currentHHMM
 
   const toggle = (h: string) => {
     if (isPast(h)) return
@@ -77,9 +74,8 @@ export default function DoctorAvailabilityPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <Navbar />
-      <div className="max-w-2xl mx-auto px-6 py-8">
+    <DoctorSidebar>
+      <div className="max-w-2xl mx-auto">
         <h1 className="text-2xl font-bold text-gray-900 mb-6">Set Availability</h1>
 
         <div className="bg-white border border-gray-100 rounded-3xl p-6">
@@ -126,6 +122,6 @@ export default function DoctorAvailabilityPage() {
           </button>
         </div>
       </div>
-    </div>
+    </DoctorSidebar>
   )
 }

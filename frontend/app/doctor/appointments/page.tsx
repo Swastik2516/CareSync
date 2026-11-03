@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Navbar from '@/components/Navbar'
+import DoctorSidebar from '@/components/DoctorSidebar'
 import apiClient from '@/lib/api'
 import { CalendarDays, FileText, Save, Users, Clock, DollarSign, AlertCircle, X, CreditCard, Search } from 'lucide-react'
 
@@ -192,12 +192,11 @@ export default function DoctorAppointmentsPage() {
   const displayList = activeTab === 'ACTIVE' ? activeAppointments : filteredHistory
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <Navbar />
-      <div className="max-w-4xl mx-auto px-6 py-8">
+    <DoctorSidebar>
+      <div className="space-y-6">
 
         {/* Doctor Summary Dashboard */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-white border border-gray-100 rounded-3xl p-5 shadow-sm flex items-center gap-4">
             <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center shrink-0">
               <Users size={24} />
@@ -532,6 +531,6 @@ export default function DoctorAppointmentsPage() {
           </div>
         </div>
       )}
-    </div>
+    </DoctorSidebar>
   )
 }

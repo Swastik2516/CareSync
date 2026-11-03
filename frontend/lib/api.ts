@@ -2,7 +2,7 @@
 import axios from 'axios'
 
 const apiClient = axios.create({
-  baseURL: 'https://care-sync-backend-hazel.vercel.app/api',
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'https://care-sync-backend-hazel.vercel.app/api',
   headers: {
     'Content-Type': 'application/json',
   },

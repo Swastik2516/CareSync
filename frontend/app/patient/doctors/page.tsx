@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Navbar from '@/components/Navbar'
+import PatientSidebar from '@/components/PatientSidebar'
 import apiClient from '@/lib/api'
 import { Search, Star, ShieldCheck } from 'lucide-react'
 
@@ -22,9 +22,8 @@ export default function DoctorsPage() {
   )
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <Navbar />
-      <div className="max-w-4xl mx-auto px-6 py-8">
+    <PatientSidebar>
+      <div className="max-w-4xl mx-auto">
         <h1 className="text-2xl font-bold text-gray-900">Find Your Specialist</h1>
         <p className="text-gray-500 mt-1 mb-6">Healthcare, perfectly in sync.</p>
 
@@ -63,6 +62,6 @@ export default function DoctorsPage() {
           </div>
         )}
       </div>
-    </div>
+    </PatientSidebar>
   )
 }

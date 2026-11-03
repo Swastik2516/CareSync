@@ -1,9 +1,9 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Navbar from '@/components/Navbar'
+import DoctorSidebar from '@/components/DoctorSidebar'
 import apiClient from '@/lib/api'
-import { Camera, Save, Trash2, X } from 'lucide-react'
+import { Camera, LayoutDashboard, Save, Trash2, X } from 'lucide-react'
 
 export default function DoctorProfilePage() {
   const router = useRouter()
@@ -17,6 +17,7 @@ export default function DoctorProfilePage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleting, setDeleting]       = useState(false)
   const [uploadingImage, setUploadingImage] = useState(false)
+  const [saved, setSaved] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -79,6 +80,7 @@ export default function DoctorProfilePage() {
         consultationFee: Number(form.consultationFee),
       })
       setMessage('✅ Profile updated successfully!')
+      setSaved(true)
     } catch (err: any) {
       setMessage(`❌ ${err.response?.data?.error ?? 'Update failed'}`)
     } finally {
@@ -122,9 +124,8 @@ export default function DoctorProfilePage() {
   )
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <Navbar />
-      <div className="max-w-xl mx-auto px-6 py-8">
+    <DoctorSidebar>
+      <div className="max-w-xl mx-auto">
         <h1 className="text-2xl font-bold text-gray-900 mb-6">Edit Profile</h1>
 
         {loading ? (
@@ -185,6 +186,17 @@ export default function DoctorProfilePage() {
               {saving ? 'Saving...' : 'Save Changes'}
             </button>
 
+            {saved && (
+              <button
+                type="button"
+                onClick={() => router.push('/doctor/dashboard')}
+                className="w-full flex items-center justify-center gap-2 bg-green-50 hover:bg-green-100 text-green-700 font-bold py-3 rounded-2xl border border-green-200 transition"
+              >
+                <LayoutDashboard size={16} />
+                Go to Dashboard
+              </button>
+            )}
+
             {/* Delete Account */}
             <div className="pt-4 border-t border-gray-100">
               <button
@@ -240,6 +252,6 @@ export default function DoctorProfilePage() {
           </div>
         </div>
       )}
-    </div>
+    </DoctorSidebar>
   )
 }
