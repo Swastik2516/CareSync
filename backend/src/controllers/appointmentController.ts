@@ -4,6 +4,7 @@ import { AuthRequest } from '../middleware/auth';
 import { Appointment } from '../models/Appointment';
 import { Availability } from '../models/Availability';
 import { MedicalReport } from '../models/MedicalReport';
+import { DoctorProfile } from '../models/DoctorProfile';
 import { cleanPastAvailability } from './doctorController';
 
 const ACTIVE   = ['PENDING', 'CONFIRMED'];
@@ -101,8 +102,11 @@ export const bookAppointment = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Slot fully booked', message: 'Maximum capacity of 10 patients reached.' });
     }
 
+    const doctorProfile = await DoctorProfile.findOne({ userId: doctorId }).session(session);
+    const amount = doctorProfile?.consultationFee ?? 0;
+
     const appointmentId = `CS-${Date.now().toString().slice(-6)}-${Math.floor(1000 + Math.random() * 9000)}`;
-    const appointment = new Appointment({ appointmentId, doctorId, patientId, date, timeSlot, reason, status: 'CONFIRMED' });
+    const appointment = new Appointment({ appointmentId, doctorId, patientId, date, timeSlot, reason, status: 'CONFIRMED', amount });
     await appointment.save({ session });
     await session.commitTransaction();
 
@@ -303,11 +307,22 @@ export const updateAppointmentStatus = async (req: AuthRequest, res: Response) =
     if (!appointment) return res.status(404).json({ error: 'Appointment not found' });
 
     if (status === 'COMPLETED') {
-      const today = new Date().toISOString().split('T')[0];
-      if (appointment.date > today) {
+      if (appointment.paymentStatus !== 'PAID') {
+        return res.status(400).json({ error: 'Payment must be completed before marking the appointment as completed.' });
+      }
+      const now = new Date();
+      const todayStr = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit',
+      }).format(now);
+      const currentHHMM = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: false,
+      }).format(now).replace(' ', ':');
+      const isFutureDate = appointment.date > todayStr;
+      const isTodayBeforeSlot = appointment.date === todayStr && currentHHMM < appointment.timeSlot;
+      if (isFutureDate || isTodayBeforeSlot) {
         if (!earlyReason || !earlyReason.trim()) {
           return res.status(400).json({
-            error: `This appointment is scheduled for ${appointment.date}. To mark it completed early (e.g. patient visited early), please provide a reason.`
+            error: `This appointment is scheduled for ${appointment.date} at ${appointment.timeSlot}. Please provide a reason for early completion.`
           });
         }
         appointment.notes = appointment.notes

@@ -62,9 +62,16 @@ export default function DoctorAppointmentsPage() {
   }, [])
 
   const handleMarkComplete = (appointment: any) => {
-    const todayStr = new Date().toISOString().split('T')[0]
-    if (appointment.date > todayStr) {
-      // Future appointment being completed early
+    if (appointment.paymentStatus !== 'PAID') {
+      setPayModeAppt(appointment)
+      return
+    }
+    const now = new Date()
+    const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now)
+    const currentHHMM = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: false }).format(now).replace(' ', ':')
+    const isFutureDate = appointment.date > todayStr
+    const isTodayBeforeSlot = appointment.date === todayStr && currentHHMM < appointment.timeSlot
+    if (isFutureDate || isTodayBeforeSlot) {
       setEarlyCompleteAppt(appointment)
       setEarlyReason('')
       setEarlyError('')
@@ -475,7 +482,7 @@ export default function DoctorAppointmentsPage() {
             </div>
 
             <p className="text-xs text-gray-600 mb-4 leading-relaxed">
-              This appointment is scheduled for a future date (<strong>{earlyCompleteAppt.date}</strong>). If the patient visited early or was treated ahead of schedule, please enter a brief completion reason/note:
+              This appointment is scheduled for <strong>{earlyCompleteAppt.date}</strong> at <strong>{earlyCompleteAppt.timeSlot}</strong>. The patient is being treated before the scheduled time. Please enter a reason:
             </p>
 
             <textarea
@@ -507,7 +514,8 @@ export default function DoctorAppointmentsPage() {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 px-4">
           <div className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl">
             <h2 className="text-lg font-bold text-gray-900 mb-1">Select Payment Mode</h2>
-            <p className="text-xs text-gray-500 mb-4">{payModeAppt.patientId?.name} — {payModeAppt.date}</p>
+            <p className="text-xs text-gray-500 mb-1">{payModeAppt.patientId?.name} — {payModeAppt.date}</p>
+            <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 mb-4">Payment must be collected before marking the appointment as completed.</p>
             <div className="grid grid-cols-2 gap-3 mb-5">
               {['CASH', 'UPI', 'CARD', 'ONLINE'].map(m => (
                 <button key={m} onClick={() => setPayMode(m)}
