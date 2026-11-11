@@ -54,11 +54,12 @@ export default function Navbar() {
 
   return (
     <nav className="bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between relative z-40">
-      <Link href={role === 'DOCTOR' ? '/doctor/appointments' : '/patient/doctors'}>
+      <Link href={role === 'DOCTOR' ? '/doctor/dashboard' : '/patient/dashboard'}>
         <span className="text-xl font-bold text-indigo-600">CareSync</span>
       </Link>
       <div className="flex items-center gap-6">
         {role === 'PATIENT' && <>
+          <Link href="/patient/dashboard" className="text-sm text-gray-600 hover:text-indigo-600 font-medium">Dashboard</Link>
           <Link href="/patient/doctors" className="text-sm text-gray-600 hover:text-indigo-600 font-medium">Find Doctors</Link>
           <Link href="/patient/appointments" className="text-sm text-gray-600 hover:text-indigo-600 font-medium">My Appointments</Link>
           <Link href="/patient/health-records" className="text-sm text-gray-600 hover:text-indigo-600 font-medium">Health Records</Link>
