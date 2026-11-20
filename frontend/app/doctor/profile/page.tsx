@@ -208,7 +208,7 @@ export default function DoctorProfilePage() {
                 Delete My Account
               </button>
               <p className="text-xs text-gray-400 text-center mt-2">
-                This will permanently delete your account and all appointments. Doctor registration will be re-enabled.
+                This will permanently delete your account and all your appointments.
               </p>
             </div>
           </form>
@@ -232,7 +232,7 @@ export default function DoctorProfilePage() {
               </div>
             </div>
             <p className="text-sm text-gray-600 mb-6 leading-relaxed">
-              Are you sure you want to delete your doctor account? All your appointments and data will be permanently removed. Doctor registration will be re-enabled for a new doctor.
+              Are you sure you want to delete your doctor account? All your appointments and data will be permanently removed. This action cannot be undone.
             </p>
             <div className="flex gap-3">
               <button
