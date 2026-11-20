@@ -13,7 +13,14 @@ import { AuthRequest } from '../middleware/auth';
 
 export const register = async (req: Request, res: Response) => {
   try {
-    const { name, email, phone, password, role, ...profileData } = req.body;
+    const { name, email, phone, password, role, doctorAccessCode, ...profileData } = req.body;
+
+    if (role === 'DOCTOR') {
+      const validCode = process.env.DOCTOR_ACCESS_CODE
+      if (!doctorAccessCode || doctorAccessCode !== validCode) {
+        return res.status(403).json({ error: 'Invalid doctor access code. Please contact the administrator.' })
+      }
+    }
 
     const existing = await User.findOne({ email });
     if (existing) return res.status(409).json({ error: 'Email already registered' });
