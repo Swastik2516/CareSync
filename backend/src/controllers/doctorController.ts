@@ -103,10 +103,14 @@ export const getDoctorAvailability = async (req: Request, res: Response) => {
 
 export const updateDoctorProfile = async (req: AuthRequest, res: Response) => {
   try {
-    const { specialization, hospital, experience, consultationFee, bio } = req.body;
+    const {
+      specialization, hospital, experience, consultationFee, bio,
+      upiId, paymentQrImage, bankAccountName, bankAccountNumber, bankIfsc
+    } = req.body;
     const profile = await DoctorProfile.findOneAndUpdate(
       { userId: req.user?.userId },
-      { $set: { specialization, hospital, experience, consultationFee, bio } },
+      { $set: { specialization, hospital, experience, consultationFee, bio,
+                upiId, paymentQrImage, bankAccountName, bankAccountNumber, bankIfsc } },
       { new: true }
     );
     if (!profile) return res.status(404).json({ error: 'Doctor profile not found' });
@@ -131,6 +135,26 @@ export const uploadProfileImage = async (req: AuthRequest, res: Response) => {
     );
     if (!profile) return res.status(404).json({ error: 'Doctor profile not found' });
     return res.json({ profileImage: uploaded.secure_url });
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+export const uploadQrImage = async (req: AuthRequest, res: Response) => {
+  try {
+    const { fileData, fileType } = req.body;
+    if (!fileData || !fileType) return res.status(400).json({ error: 'fileData and fileType are required' });
+    const uploaded = await cloudinary.uploader.upload(fileData, {
+      folder: 'caresync/qrcodes',
+      resource_type: 'image',
+    });
+    const profile = await DoctorProfile.findOneAndUpdate(
+      { userId: req.user?.userId },
+      { $set: { paymentQrImage: uploaded.secure_url } },
+      { new: true }
+    );
+    if (!profile) return res.status(404).json({ error: 'Doctor profile not found' });
+    return res.json({ paymentQrImage: uploaded.secure_url });
   } catch (error: any) {
     return res.status(500).json({ error: error.message });
   }

@@ -6,6 +6,8 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import mongoose from 'mongoose';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
 import authRoutes        from './routes/auth';
 import doctorRoutes      from './routes/doctor';
 import appointmentRoutes from './routes/appointment';
@@ -14,6 +16,19 @@ import webhookRoutes     from './routes/webhook';
 import reportRoutes      from './routes/report';
 
 const app = express();
+const httpServer = createServer(app);
+
+// ── Socket.IO setup ───────────────────────────────────────────────────────────
+export const io = new Server(httpServer, {
+  cors: { origin: process.env.FRONTEND_URL || '*', credentials: true },
+});
+
+// Doctors join a room named after their userId so we can target them
+io.on('connection', (socket) => {
+  socket.on('join-doctor', (doctorId: string) => {
+    socket.join(`doctor:${doctorId}`);
+  });
+});
 
 // ── Security middleware ───────────────────────────────────────────────────────
 app.use(helmet());
@@ -23,8 +38,6 @@ app.use(cors({
 }));
 
 // ── CRITICAL: Webhook route registered BEFORE express.json() ─────────────────
-// The webhook controller applies express.raw() per-route to capture raw buffer.
-// If express.json() runs first globally, the raw body is lost and HMAC fails.
 app.use('/api/webhooks', webhookRoutes);
 
 // ── Global JSON parser (all other routes) ────────────────────────────────────
@@ -52,6 +65,6 @@ const PORT = Number(process.env.PORT) || 8080;
 mongoose.connect(process.env.MONGO_URI as string)
   .then(() => {
     console.log('MongoDB Connected');
-    app.listen(PORT, '0.0.0.0', () => console.log(`CareSync Backend running on port ${PORT}`));
+    httpServer.listen(PORT, '0.0.0.0', () => console.log(`CareSync Backend running on port ${PORT}`));
   })
   .catch((err) => console.error('DB Connection Error:', err));

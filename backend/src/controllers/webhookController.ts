@@ -3,6 +3,8 @@ import crypto from 'crypto';
 import mongoose from 'mongoose';
 import { Appointment } from '../models/Appointment';
 import { PaymentLog } from '../models/PaymentLog';
+import { User } from '../models/User';
+import { io } from '../app';
 
 // ─── POST /api/webhooks/razorpay ──────────────────────────────────────────────
 // Receives Razorpay webhook events, verifies HMAC signature,
@@ -105,6 +107,18 @@ export const razorpayWebhook = async (req: Request, res: Response) => {
 
         await session.commitTransaction();
         console.log(`[Webhook] Payment captured — Appointment ${appointmentId} marked PAID`);
+
+        // ── Notify doctor via Socket.IO ───────────────────────────────────
+        const appt = await Appointment.findById(appointmentId).populate('patientId', 'name');
+        if (appt) {
+          const patientName = (appt.patientId as any)?.name ?? 'A patient';
+          io.to(`doctor:${appt.doctorId.toString()}`).emit('payment-received', {
+            patientName,
+            amount: capturedAmount / 100,
+            appointmentId,
+            paidAt: new Date().toISOString(),
+          });
+        }
       } catch (txErr: any) {
         await session.abortTransaction();
         console.error('[Webhook] Transaction failed:', txErr.message);

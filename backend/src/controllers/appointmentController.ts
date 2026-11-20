@@ -59,7 +59,7 @@ export const bookAppointment = async (req: AuthRequest, res: Response) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
-    const { doctorId: doctorIdRaw, date, timeSlot, reason } = req.body;
+    const { doctorId: doctorIdRaw, date, timeSlot, reason, paymentMode } = req.body;
     const patientId = req.user?.userId;
 
     if (!mongoose.Types.ObjectId.isValid(doctorIdRaw)) {
@@ -106,7 +106,11 @@ export const bookAppointment = async (req: AuthRequest, res: Response) => {
     const amount = doctorProfile?.consultationFee ?? 0;
 
     const appointmentId = `CS-${Date.now().toString().slice(-6)}-${Math.floor(1000 + Math.random() * 9000)}`;
-    const appointment = new Appointment({ appointmentId, doctorId, patientId, date, timeSlot, reason, status: 'CONFIRMED', amount });
+    const appointment = new Appointment({
+      appointmentId, doctorId, patientId, date, timeSlot, reason,
+      status: 'CONFIRMED', amount,
+      ...(paymentMode ? { paymentMode } : {}),
+    });
     await appointment.save({ session });
     await session.commitTransaction();
 

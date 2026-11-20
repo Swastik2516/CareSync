@@ -15,10 +15,9 @@ export const register = async (req: Request, res: Response) => {
   try {
     const { name, email, phone, password, role, ...profileData } = req.body;
 
-    // Block doctor registration if one already exists
+    // Allow multiple doctors to register
     if (role === 'DOCTOR') {
-      const doctorExists = await User.findOne({ role: 'DOCTOR' });
-      if (doctorExists) return res.status(403).json({ error: 'Doctor registration is closed.' });
+      // No restriction — multiple doctors allowed
     }
 
     const existing = await User.findOne({ email });
@@ -66,14 +65,9 @@ export const login = async (req: Request, res: Response) => {
   }
 };
 
-// ─── Doctor Slot Check ──────────────────────────────────────────────────────────
+// ─── Doctor Slot Check (always open now) ──────────────────────────────────────
 export const doctorSlot = async (_req: Request, res: Response) => {
-  try {
-    const doctorExists = await User.findOne({ role: 'DOCTOR' });
-    return res.json({ open: !doctorExists });
-  } catch (error: any) {
-    return res.status(500).json({ error: error.message });
-  }
+  return res.json({ open: true });
 };
 
 // ─── Delete Account ───────────────────────────────────────────────────────────

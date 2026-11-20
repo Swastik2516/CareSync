@@ -8,7 +8,13 @@ const doctorProfileSchema = new Schema({
   consultationFee: { type: Number, required: true },
   bio: { type: String, required: true },
   rating: { type: Number, default: 5.0 },
-  profileImage: { type: String, default: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?q=80&w=400' }
+  profileImage: { type: String, default: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?q=80&w=400' },
+  // Payment payout details
+  upiId: { type: String, default: '' },
+  paymentQrImage: { type: String, default: '' },
+  bankAccountName: { type: String, default: '' },
+  bankAccountNumber: { type: String, default: '' },
+  bankIfsc: { type: String, default: '' },
 });
 
 export const DoctorProfile = model('DoctorProfile', doctorProfileSchema);

@@ -13,6 +13,8 @@ import {
   saveTreatment,
   getPatientReportsForDoctor,
   getPatientReportFileForDoctor,
+  getDoctorPaymentNotifications,
+  markDoctorNotificationRead,
 } from '../controllers/appointmentController';
 import { authenticateToken, requireRole } from '../middleware/auth';
 
@@ -25,6 +27,8 @@ router.patch('/:appointmentId/notifications/:notifId/read', authenticateToken, r
 router.patch('/:id/reschedule', authenticateToken, requireRole('PATIENT'), rescheduleAppointment);
 router.get('/doctor', authenticateToken, requireRole('DOCTOR'), getDoctorAppointments);
 router.get('/doctor/history', authenticateToken, requireRole('DOCTOR'), getDoctorHistory);
+router.get('/doctor/payment-notifications', authenticateToken, requireRole('DOCTOR'), getDoctorPaymentNotifications);
+router.patch('/doctor/:appointmentId/payment-notifications/:notifId/read', authenticateToken, requireRole('DOCTOR'), markDoctorNotificationRead);
 router.get('/patient/:patientId/reports', authenticateToken, requireRole('DOCTOR'), getPatientReportsForDoctor);
 router.get('/patient/:patientId/reports/:reportId/file', authenticateToken, requireRole('DOCTOR'), getPatientReportFileForDoctor);
 router.patch('/:id/status', authenticateToken, requireRole('DOCTOR'), updateAppointmentStatus);

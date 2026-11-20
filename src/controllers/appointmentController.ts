@@ -357,6 +357,50 @@ export const getPatientReportsForDoctor = async (req: AuthRequest, res: Response
   }
 };
 
+// ── Doctor: get payment notifications ───────────────────────────────────────
+export const getDoctorPaymentNotifications = async (req: AuthRequest, res: Response) => {
+  try {
+    const appointments = await Appointment.find({
+      doctorId: req.user?.userId,
+      'doctorNotifications.read': false,
+    }).populate('patientId', 'name').select('doctorNotifications appointmentId date timeSlot patientId');
+
+    const notifications: any[] = [];
+    appointments.forEach(a => {
+      (a.doctorNotifications as any[])
+        .filter((n: any) => !n.read)
+        .forEach((n: any) => {
+          notifications.push({
+            appointmentId: a._id,
+            appointmentRef: a.appointmentId,
+            patientName: (a.patientId as any)?.name || 'Patient',
+            date: a.date,
+            timeSlot: a.timeSlot,
+            message: n.message,
+            notifId: n._id,
+            createdAt: n.createdAt,
+          });
+        });
+    });
+    return res.json(notifications);
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
+// ── Doctor: mark payment notification read ────────────────────────────────────
+export const markDoctorNotificationRead = async (req: AuthRequest, res: Response) => {
+  try {
+    await Appointment.updateOne(
+      { _id: req.params.appointmentId, doctorId: req.user?.userId, 'doctorNotifications._id': req.params.notifId },
+      { $set: { 'doctorNotifications.$.read': true } }
+    );
+    return res.json({ message: 'Marked as read' });
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
 // ── Doctor: get a specific patient report file ────────────────────────────────
 export const getPatientReportFileForDoctor = async (req: AuthRequest, res: Response) => {
   try {

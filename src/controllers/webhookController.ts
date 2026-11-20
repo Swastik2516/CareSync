@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import mongoose from 'mongoose';
 import { Appointment } from '../models/Appointment';
 import { PaymentLog } from '../models/PaymentLog';
+import { User } from '../models/User';
 
 // ─── POST /api/webhooks/razorpay ──────────────────────────────────────────────
 // Receives Razorpay webhook events, verifies HMAC signature,
@@ -81,6 +82,10 @@ export const razorpayWebhook = async (req: Request, res: Response) => {
       const session = await mongoose.startSession();
       session.startTransaction();
       try {
+        // Fetch patient name for notification
+        const patient = await User.findById(appointment.patientId).select('name').lean();
+        const patientName = (patient as any)?.name || 'A patient';
+
         await Appointment.findByIdAndUpdate(
           appointmentId,
           {
@@ -88,6 +93,13 @@ export const razorpayWebhook = async (req: Request, res: Response) => {
             razorpayPaymentId,
             razorpayOrderId,
             paidAt:            new Date(),
+            $push: {
+              doctorNotifications: {
+                message: `💰 Payment received from ${patientName} — ₹${capturedAmount / 100} for appointment on ${appointment.date} at ${appointment.timeSlot}.`,
+                read: false,
+                createdAt: new Date(),
+              }
+            }
           },
           { session }
         );

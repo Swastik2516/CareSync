@@ -27,8 +27,16 @@ const appointmentSchema = new Schema({
     createdAt: { type: Date, default: Date.now },
   }],
 
+  // ── Doctor payment notifications ──────────────────────────────────────────
+  doctorNotifications: [{
+    message:   { type: String },
+    read:      { type: Boolean, default: false },
+    createdAt: { type: Date, default: Date.now },
+  }],
+
   // ── Payment fields ────────────────────────────────────────────────────────
   amount:            { type: Number, default: 0 },
+  paymentMode:       { type: String, enum: ['ONLINE', 'OPD'], default: 'ONLINE' },
   paymentStatus:     { type: String, enum: ['PENDING', 'PAID', 'FAILED', 'CANCELLED'], default: 'PENDING' },
   razorpayOrderId:   { type: String, default: null },
   razorpayPaymentId: { type: String, default: null },

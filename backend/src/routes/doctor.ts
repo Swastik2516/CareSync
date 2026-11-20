@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getAllDoctors, getDoctorById, getDoctorAvailability, setAvailability, updateDoctorProfile, uploadProfileImage, cleanPastAvailability } from '../controllers/doctorController';
+import { getAllDoctors, getDoctorById, getDoctorAvailability, setAvailability, updateDoctorProfile, uploadProfileImage, uploadQrImage, cleanPastAvailability } from '../controllers/doctorController';
 import { authenticateToken, requireRole } from '../middleware/auth';
 
 const router = Router();
@@ -12,6 +12,7 @@ router.delete('/availability/cleanup', async (_req, res) => {
 });
 router.patch('/profile', authenticateToken, requireRole('DOCTOR'), updateDoctorProfile);
 router.post('/profile-image', authenticateToken, requireRole('DOCTOR'), uploadProfileImage);
+router.post('/qr-image', authenticateToken, requireRole('DOCTOR'), uploadQrImage);
 router.get('/:id', getDoctorById);
 
 export default router;
