@@ -15,8 +15,6 @@ export const register = async (req: Request, res: Response) => {
   try {
     const { name, email, phone, password, role, ...profileData } = req.body;
 
-    // Multiple doctors allowed
-
     const existing = await User.findOne({ email });
     if (existing) return res.status(409).json({ error: 'Email already registered' });
 
@@ -24,9 +22,11 @@ export const register = async (req: Request, res: Response) => {
     const user = await User.create({ name, email, phone, passwordHash, role });
 
     if (role === 'DOCTOR') {
-      await DoctorProfile.create({ userId: user._id, ...profileData });
+      const { specialization, hospital, experience, consultationFee, bio } = profileData;
+      await DoctorProfile.create({ userId: user._id, specialization, hospital, experience, consultationFee, bio });
     } else {
-      await PatientProfile.create({ userId: user._id, ...profileData });
+      const { dateOfBirth, gender } = profileData;
+      await PatientProfile.create({ userId: user._id, dateOfBirth, gender });
     }
 
     const token = jwt.sign(
