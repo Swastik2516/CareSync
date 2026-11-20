@@ -3,7 +3,6 @@ import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import apiClient from '@/lib/api'
-import { storage } from '@/lib/storage'
 import { Star, MapPin, Clock, IndianRupee, CreditCard, Banknote, X, Loader2 } from 'lucide-react'
 
 function BookingContent() {
@@ -24,14 +23,13 @@ function BookingContent() {
   const [showPayModal, setShowPayModal] = useState(false)
 
   useEffect(() => {
-    storage.get('token').then(token => {
-      if (!token) { router.push('/login'); return }
-      if (!doctorId) return
-      apiClient.get(`/doctors/${doctorId}`)
-        .then(r => setDoctor(r.data))
-        .catch(console.error)
-        .finally(() => setLoading(false))
-    })
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
+    if (!token) { router.push('/login'); return }
+    if (!doctorId) return
+    apiClient.get(`/doctors/${doctorId}`)
+      .then(r => setDoctor(r.data))
+      .catch(console.error)
+      .finally(() => setLoading(false))
   }, [doctorId, router])
 
   useEffect(() => {
