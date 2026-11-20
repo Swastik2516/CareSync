@@ -29,8 +29,10 @@ function getStrength(password: string) {
 
 export default function RegisterPage() {
   const router = useRouter()
-  const [doctorSlotOpen, setDoctorSlotOpen] = useState(false)
   const [role, setRole] = useState<'PATIENT' | 'DOCTOR'>('PATIENT')
+  const [doctorCode, setDoctorCode] = useState('')
+  const [showDoctorCode, setShowDoctorCode] = useState(false)
+  const DOCTOR_SECRET = 'CARESYNC-DOC-2025'
   const [form, setForm] = useState({
     name: '',
     email: '',
@@ -52,13 +54,6 @@ export default function RegisterPage() {
   const [profileImageFile, setProfileImageFile] = useState<string | null>(null)
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null)
   const [profileImageType, setProfileImageType] = useState<string>('')
-
-  // Check if doctor registration slot is available
-  useEffect(() => {
-    apiClient.get('/auth/doctor-slot')
-      .then(res => setDoctorSlotOpen(res.data.open))
-      .catch(() => setDoctorSlotOpen(false))
-  }, [])
 
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setForm(f => ({ ...f, [k]: e.target.value }))
@@ -84,6 +79,7 @@ export default function RegisterPage() {
     e.preventDefault()
     if (!allRulesPassed) return setError('Please satisfy all password security requirements.')
     if (form.password !== confirmPassword) return setError('Passwords do not match.')
+    if (role === 'DOCTOR' && doctorCode !== DOCTOR_SECRET) return setError('Invalid doctor access code.')
     setLoading(true)
     setError('')
     try {
@@ -241,42 +237,50 @@ export default function RegisterPage() {
                 </div>
               </button>
 
-              {doctorSlotOpen ? (
-                <button
-                  type="button"
-                  onClick={() => setRole('DOCTOR')}
-                  className={`flex items-center gap-3 p-3.5 rounded-2xl border text-left transition-all relative ${
-                    role === 'DOCTOR'
-                      ? 'bg-gradient-to-r from-blue-900/40 to-indigo-900/30 border-blue-500 text-white shadow-md shadow-blue-500/10 ring-1 ring-blue-500/50'
-                      : 'bg-slate-800/40 border-slate-700/70 text-slate-400 hover:text-slate-200 hover:bg-slate-800/80'
-                  }`}
-                >
-                  <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-                    role === 'DOCTOR' ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400'
-                  }`}>
-                    <Stethoscope size={18} />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-1.5">
-                      <p className="text-sm font-bold text-white">Doctor</p>
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    </div>
-                    <p className="text-[11px] text-slate-400">Manage appointments</p>
-                  </div>
-                </button>
-              ) : (
-                <div className="flex items-center gap-3 p-3.5 rounded-2xl border border-slate-800 bg-slate-800/20 text-slate-500 cursor-not-allowed">
-                  <div className="w-9 h-9 rounded-xl bg-slate-800/50 flex items-center justify-center text-slate-600 shrink-0">
-                    <Stethoscope size={18} />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-slate-500">Doctor</p>
-                    <p className="text-[11px] text-slate-600">Slots full at capacity</p>
-                  </div>
+              <button
+                type="button"
+                onClick={() => { setRole('DOCTOR'); setShowDoctorCode(true) }}
+                className={`flex items-center gap-3 p-3.5 rounded-2xl border text-left transition-all relative ${
+                  role === 'DOCTOR'
+                    ? 'bg-gradient-to-r from-blue-900/40 to-indigo-900/30 border-blue-500 text-white shadow-md shadow-blue-500/10 ring-1 ring-blue-500/50'
+                    : 'bg-slate-800/40 border-slate-700/70 text-slate-400 hover:text-slate-200 hover:bg-slate-800/80'
+                }`}
+              >
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                  role === 'DOCTOR' ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400'
+                }`}>
+                  <Stethoscope size={18} />
                 </div>
-              )}
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-sm font-bold text-white">Doctor</p>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  </div>
+                  <p className="text-[11px] text-slate-400">Manage appointments</p>
+                </div>
+              </button>
             </div>
           </div>
+
+          {/* Doctor Access Code prompt */}
+          {showDoctorCode && role === 'DOCTOR' && (
+            <div className="mb-4 p-4 rounded-2xl bg-blue-500/10 border border-blue-500/30">
+              <label className="block text-xs font-semibold text-blue-300 mb-2 uppercase tracking-wider">Doctor Access Code</label>
+              <input
+                type="password"
+                placeholder="Enter doctor access code"
+                value={doctorCode}
+                onChange={e => setDoctorCode(e.target.value)}
+                className="w-full bg-slate-800/60 border border-slate-700/80 rounded-2xl px-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:border-blue-500"
+              />
+              {doctorCode.length > 0 && doctorCode !== DOCTOR_SECRET && (
+                <p className="text-xs text-red-400 mt-1.5 flex items-center gap-1"><X size={12} /> Invalid access code</p>
+              )}
+              {doctorCode === DOCTOR_SECRET && (
+                <p className="text-xs text-emerald-400 mt-1.5 flex items-center gap-1"><Check size={12} /> Access granted</p>
+              )}
+            </div>
+          )}
 
           {/* Form */}
           <form onSubmit={handleRegister} className="space-y-4">
@@ -610,7 +614,7 @@ export default function RegisterPage() {
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={loading || !allRulesPassed || !passwordsMatch}
+              disabled={loading || !allRulesPassed || !passwordsMatch || (role === 'DOCTOR' && doctorCode !== DOCTOR_SECRET)}
               className="w-full mt-4 bg-gradient-to-r from-blue-600 via-indigo-600 to-indigo-700 hover:from-blue-500 hover:via-indigo-500 hover:to-indigo-600 text-white font-bold py-3.5 rounded-2xl shadow-lg shadow-indigo-600/30 transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed group active:scale-[0.99]"
             >
               {loading ? (
