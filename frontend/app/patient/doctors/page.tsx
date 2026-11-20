@@ -53,7 +53,7 @@ export default function DoctorsPage() {
                       <Star size={14} className="text-yellow-400 fill-yellow-400" />
                       <span className="text-xs font-bold text-gray-700">{doc.rating}</span>
                     </div>
-                    <span className="font-bold text-indigo-900">${doc.consultationFee}</span>
+                    <span className="font-bold text-indigo-900">₹{doc.consultationFee}</span>
                   </div>
                 </div>
               </div>

@@ -6,7 +6,7 @@ import {
   Eye, EyeOff, Check, X, Mail, Lock, User, Phone,
   Sparkles, ShieldCheck, Stethoscope,
   Building2, Award, DollarSign, Calendar, ArrowRight,
-  AlertCircle
+  AlertCircle, Camera, ImagePlus
 } from 'lucide-react'
 import apiClient from '@/lib/api'
 
@@ -49,6 +49,9 @@ export default function RegisterPage() {
   const [showConfirm, setShowConfirm] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [profileImageFile, setProfileImageFile] = useState<string | null>(null)
+  const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null)
+  const [profileImageType, setProfileImageType] = useState<string>('')
 
   // Check if doctor registration slot is available
   useEffect(() => {
@@ -63,6 +66,19 @@ export default function RegisterPage() {
   const strength = useMemo(() => getStrength(form.password), [form.password])
   const allRulesPassed = PASSWORD_RULES.every(r => r.test(form.password))
   const passwordsMatch = form.password === confirmPassword && confirmPassword.length > 0
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setProfileImageType(file.type)
+    const reader = new FileReader()
+    reader.onload = () => {
+      const base64 = reader.result as string
+      setProfileImageFile(base64)
+      setProfileImagePreview(base64)
+    }
+    reader.readAsDataURL(file)
+  }
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -80,6 +96,17 @@ export default function RegisterPage() {
       localStorage.setItem('token', data.token)
       localStorage.setItem('role', data.role)
       localStorage.setItem('name', data.name)
+
+      // Upload profile image for doctor if provided
+      if (role === 'DOCTOR' && profileImageFile) {
+        try {
+          await apiClient.post('/doctors/profile-image',
+            { fileData: profileImageFile, fileType: profileImageType },
+            { headers: { Authorization: `Bearer ${data.token}` } }
+          )
+        } catch (_) { /* non-fatal, default image will be used */ }
+      }
+
       router.push(data.role === 'DOCTOR' ? '/doctor/dashboard' : '/patient/dashboard')
     } catch (err: any) {
       setError(err.response?.data?.error ?? 'Registration failed. Please try again.')
@@ -552,6 +579,30 @@ export default function RegisterPage() {
                     rows={3}
                     className="w-full bg-slate-800/60 border border-slate-700/80 rounded-2xl px-4 py-3 text-sm text-white placeholder-slate-500 outline-none transition focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 resize-none"
                   />
+                </div>
+
+                {/* Profile Image Upload */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
+                    Profile Photo <span className="text-slate-500 normal-case font-normal">(optional)</span>
+                  </label>
+                  <label className="flex items-center gap-4 cursor-pointer group">
+                    <div className="relative w-20 h-20 rounded-2xl overflow-hidden bg-slate-800 border-2 border-dashed border-slate-700 group-hover:border-indigo-500 transition shrink-0 flex items-center justify-center">
+                      {profileImagePreview ? (
+                        <img src={profileImagePreview} alt="Preview" className="w-full h-full object-cover" />
+                      ) : (
+                        <Camera size={24} className="text-slate-500 group-hover:text-indigo-400 transition" />
+                      )}
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-300 font-medium flex items-center gap-2">
+                        <ImagePlus size={16} className="text-indigo-400" />
+                        {profileImagePreview ? 'Change photo' : 'Upload profile photo'}
+                      </p>
+                      <p className="text-xs text-slate-500 mt-1">JPG, PNG or WEBP. Shown to patients when booking.</p>
+                    </div>
+                    <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
+                  </label>
                 </div>
               </div>
             )}
