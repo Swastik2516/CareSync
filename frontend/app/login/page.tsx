@@ -6,6 +6,7 @@ import {
   Eye, EyeOff, Mail, Lock, ArrowRight, Sparkles,
   AlertCircle, Stethoscope, User, ShieldCheck
 } from 'lucide-react'
+import Image from 'next/image'
 import apiClient from '@/lib/api'
 
 export default function LoginPage() {
@@ -63,7 +64,7 @@ export default function LoginPage() {
 
           {/* KLE Hospital Logo */}
           <div className="relative mb-6 z-10 flex flex-col items-center">
-            <img src="/kle-logo.webp" alt="KLE Hospital" className="w-72 h-72 object-contain drop-shadow-2xl" />
+            <Image src="/kle-logo.webp" alt="KLE Hospital" width={288} height={288} className="object-contain drop-shadow-2xl" priority />
             <p className="font-black text-center text-3xl mt-4 leading-tight tracking-wide bg-gradient-to-r from-amber-400 via-yellow-300 to-orange-400 text-transparent bg-clip-text drop-shadow-lg">
               KLE's Dr. Prabhakar Kore Hospital &<br />Medical Research Centre
             </p>
@@ -75,7 +76,7 @@ export default function LoginPage() {
           
           {/* Mobile Brand Header */}
           <div className="flex lg:hidden items-center gap-3 mb-6">
-            <img src="/KLE.png" alt="KLE Hospital" className="w-10 h-10 object-contain" />
+            <Image src="/kle-logo.webp" alt="KLE Hospital" width={40} height={40} className="object-contain" />
             <div>
               <h2 className="text-xl font-black text-white">Care<span className="text-indigo-400">Sync</span></h2>
               <p className="text-xs text-slate-400">Sign in to your account</p>

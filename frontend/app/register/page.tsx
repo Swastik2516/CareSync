@@ -7,6 +7,7 @@ import {
   Stethoscope, Building2, Award, IndianRupee, Calendar,
   ArrowRight, AlertCircle, Camera, ImagePlus
 } from 'lucide-react'
+import Image from 'next/image'
 import apiClient from '@/lib/api'
 
 const PASSWORD_RULES = [
@@ -106,7 +107,7 @@ export default function RegisterPage() {
 
         {/* Logo */}
         <div className="text-center mb-8">
-          <img src="/kle-logo.webp" alt="KLE Hospital" className="w-48 h-48 object-contain mx-auto mb-3 drop-shadow-xl" />
+          <Image src="/kle-logo.webp" alt="KLE Hospital" width={192} height={192} className="object-contain mx-auto mb-3 drop-shadow-xl" priority />
           <p className="font-black text-xl leading-snug bg-gradient-to-r from-amber-400 via-yellow-300 to-orange-400 text-transparent bg-clip-text">
             KLE's Dr. Prabhakar Kore Hospital &<br />Medical Research Centre
           </p>
