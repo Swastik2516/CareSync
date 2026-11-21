@@ -78,8 +78,9 @@ export default function LoginPage() {
           <div className="flex lg:hidden items-center gap-3 mb-6">
             <Image src="/kle-logo.webp" alt="KLE Hospital" width={40} height={40} className="object-contain" />
             <div>
-              <h2 className="text-xl font-black text-white">Care<span className="text-indigo-400">Sync</span></h2>
-              <p className="text-xs text-slate-400">Sign in to your account</p>
+              <h2 className="text-sm font-black bg-gradient-to-r from-amber-400 via-yellow-300 to-orange-400 text-transparent bg-clip-text leading-tight">
+                KLE's Dr. Prabhakar Kore Hospital &<br />Medical Research Centre
+              </h2>
             </div>
           </div>
 
