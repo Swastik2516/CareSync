@@ -106,16 +106,11 @@ export default function RegisterPage() {
 
         {/* Logo */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 shadow-lg shadow-blue-500/30 mb-4">
-            <svg viewBox="0 0 100 100" className="w-8 h-8" fill="none">
-              <path d="M38 16H62V38H84V62H62V84H38V62H16V38H38V16Z" stroke="white" strokeWidth="6" strokeLinejoin="round"/>
-              <path d="M22 50H36L44 38L52 62L60 44L66 52H78" stroke="#38bdf8" strokeWidth="5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </div>
-          <h1 className="text-3xl font-black text-white">
-            Care<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400">Sync</span>
-          </h1>
-          <p className="text-slate-400 text-sm mt-1">Create your account</p>
+          <img src="/kle-logo.webp" alt="KLE Hospital" className="w-48 h-48 object-contain mx-auto mb-3 drop-shadow-xl" />
+          <p className="font-black text-xl leading-snug bg-gradient-to-r from-amber-400 via-yellow-300 to-orange-400 text-transparent bg-clip-text">
+            KLE's Dr. Prabhakar Kore Hospital &<br />Medical Research Centre
+          </p>
+
         </div>
 
         {/* Card */}

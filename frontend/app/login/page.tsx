@@ -61,56 +61,11 @@ export default function LoginPage() {
           {/* Subtle Grid Pattern Overlay */}
           <div className="absolute inset-0 bg-[radial-gradient(#38bdf8_1px,transparent_1px)] [background-size:24px_24px] opacity-10 pointer-events-none" />
 
-          {/* Glowing Healthcare Icon Container */}
-          <div className="relative mb-8 group z-10">
-            {/* Outer Glow Halo */}
-            <div className="absolute inset-0 rounded-3xl bg-gradient-to-tr from-blue-500 via-indigo-500 to-teal-400 blur-2xl opacity-40 group-hover:opacity-60 transition-opacity animate-pulse-subtle" />
-            
-            {/* Logo Card */}
-            <div className="relative w-32 h-32 rounded-3xl bg-gradient-to-tr from-slate-900 via-[#0e213d] to-indigo-900 p-0.5 border border-indigo-500/40 shadow-2xl flex items-center justify-center">
-              {/* Healthcare Cross & ECG Pulse SVG Logo */}
-              <svg
-                viewBox="0 0 100 100"
-                className="w-20 h-20 text-indigo-400 drop-shadow-[0_0_16px_rgba(99,102,241,0.6)]"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                {/* Medical Cross Base */}
-                <path
-                  d="M38 16C38 12.6863 40.6863 10 44 10H56C59.3137 10 62 12.6863 62 16V38H84C87.3137 38 90 40.6863 90 44V56C90 59.3137 87.3137 62 84 62H62V84C62 87.3137 59.3137 90 56 90H44C40.6863 90 38 87.3137 38 84V62H16C12.6863 62 10 59.3137 10 56V44C10 40.6863 12.6863 38 16 38H38V16Z"
-                  fill="url(#cross-gradient)"
-                  fillOpacity="0.25"
-                  stroke="url(#cross-gradient)"
-                  strokeWidth="3.5"
-                  strokeLinejoin="round"
-                />
-                {/* ECG Pulse Wave through the Center */}
-                <path
-                  d="M18 50H35L42 36L50 64L58 42L64 54L68 50H82"
-                  stroke="#38bdf8"
-                  strokeWidth="4"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <circle cx="50" cy="64" r="3" fill="#a5f3fc" />
-                <defs>
-                  <linearGradient id="cross-gradient" x1="10" y1="10" x2="90" y2="90" gradientUnits="userSpaceOnUse">
-                    <stop stopColor="#3b82f6" />
-                    <stop offset="0.5" stopColor="#6366f1" />
-                    <stop offset="1" stopColor="#06b6d4" />
-                  </linearGradient>
-                </defs>
-              </svg>
-            </div>
-          </div>
-
-          {/* Brand Title */}
-          <div className="z-10">
-            <h1 className="text-4xl font-black tracking-tight text-white">
-              Care<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-400 to-cyan-400">Sync</span>
-            </h1>
-            <p className="text-xs font-bold uppercase tracking-widest text-slate-400 mt-2">
-              Healthcare Platform
+          {/* KLE Hospital Logo */}
+          <div className="relative mb-6 z-10 flex flex-col items-center">
+            <img src="/kle-logo.webp" alt="KLE Hospital" className="w-72 h-72 object-contain drop-shadow-2xl" />
+            <p className="font-black text-center text-3xl mt-4 leading-tight tracking-wide bg-gradient-to-r from-amber-400 via-yellow-300 to-orange-400 text-transparent bg-clip-text drop-shadow-lg">
+              KLE's Dr. Prabhakar Kore Hospital &<br />Medical Research Centre
             </p>
           </div>
         </div>
@@ -120,12 +75,7 @@ export default function LoginPage() {
           
           {/* Mobile Brand Header */}
           <div className="flex lg:hidden items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-blue-500/30">
-              <svg viewBox="0 0 100 100" className="w-6 h-6 text-white" fill="none">
-                <path d="M38 16H62V38H84V62H62V84H38V62H16V38H38V16Z" stroke="white" strokeWidth="6" />
-                <path d="M22 50H36L44 38L52 62L60 44L66 52H78" stroke="#38bdf8" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
+            <img src="/KLE.png" alt="KLE Hospital" className="w-10 h-10 object-contain" />
             <div>
               <h2 className="text-xl font-black text-white">Care<span className="text-indigo-400">Sync</span></h2>
               <p className="text-xs text-slate-400">Sign in to your account</p>
