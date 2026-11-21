@@ -26,7 +26,7 @@ function getStrength(password: string) {
   return              { label: 'Very Strong',  color: 'bg-emerald-500', text: 'text-emerald-400', width: 'w-full' }
 }
 
-const DOCTOR_SECRET = 'CARESYNC-DOC-2025'
+const DOCTOR_SECRET = 'KLE-HOSPITAL-001'
 
 export default function RegisterPage() {
   const router = useRouter()
