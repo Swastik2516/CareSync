@@ -5,7 +5,7 @@ import Link from 'next/link'
 import {
   Eye, EyeOff, Check, X, Mail, Lock, User, Phone,
   Stethoscope, Building2, Award, IndianRupee, Calendar,
-  ArrowRight, AlertCircle, Camera, ImagePlus, KeyRound
+  ArrowRight, AlertCircle, Camera, ImagePlus
 } from 'lucide-react'
 import apiClient from '@/lib/api'
 
@@ -26,13 +26,9 @@ function getStrength(password: string) {
   return              { label: 'Very Strong',  color: 'bg-emerald-500', text: 'text-emerald-400', width: 'w-full' }
 }
 
-const DOCTOR_SECRET = 'KLE-HOSPITAL-001'
-
 export default function RegisterPage() {
   const router = useRouter()
   const [role, setRole] = useState<'PATIENT' | 'DOCTOR'>('PATIENT')
-  const [doctorCode, setDoctorCode] = useState('')
-  const [showDoctorCode, setShowDoctorCode] = useState(false)
   const [form, setForm] = useState({
     name: '', email: '', phone: '', password: '',
     dateOfBirth: '', gender: 'Male',
@@ -53,8 +49,6 @@ export default function RegisterPage() {
   const strength      = useMemo(() => getStrength(form.password), [form.password])
   const allRulesPassed = PASSWORD_RULES.every(r => r.test(form.password))
   const passwordsMatch = form.password === confirmPassword && confirmPassword.length > 0
-  const doctorCodeOk   = role === 'PATIENT' || doctorCode === DOCTOR_SECRET
-
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -72,7 +66,6 @@ export default function RegisterPage() {
     e.preventDefault()
     if (!allRulesPassed)  return setError('Please satisfy all password requirements.')
     if (!passwordsMatch)  return setError('Passwords do not match.')
-    if (!doctorCodeOk)    return setError('Invalid doctor access code.')
     setLoading(true)
     setError('')
     try {
@@ -140,7 +133,7 @@ export default function RegisterPage() {
           <div>
             <label className="block text-xs font-semibold text-slate-300 mb-2 uppercase tracking-wider">Account Type</label>
             <div className="grid grid-cols-2 gap-3">
-              <button type="button" onClick={() => { setRole('PATIENT'); setShowDoctorCode(false); setDoctorCode('') }}
+              <button type="button" onClick={() => setRole('PATIENT')}
                 className={`flex items-center gap-3 p-3.5 rounded-2xl border text-left transition-all ${
                   role === 'PATIENT'
                     ? 'bg-indigo-900/40 border-indigo-500 ring-1 ring-indigo-500/50'
@@ -155,7 +148,7 @@ export default function RegisterPage() {
                 </div>
               </button>
 
-              <button type="button" onClick={() => { setRole('DOCTOR'); setShowDoctorCode(true) }}
+              <button type="button" onClick={() => setRole('DOCTOR')}
                 className={`flex items-center gap-3 p-3.5 rounded-2xl border text-left transition-all ${
                   role === 'DOCTOR'
                     ? 'bg-blue-900/40 border-blue-500 ring-1 ring-blue-500/50'
@@ -174,27 +167,6 @@ export default function RegisterPage() {
               </button>
             </div>
           </div>
-
-          {/* Doctor Access Code */}
-          {showDoctorCode && role === 'DOCTOR' && (
-            <div className="p-4 rounded-2xl bg-blue-500/10 border border-blue-500/30">
-              <label className="block text-xs font-semibold text-blue-300 mb-2 uppercase tracking-wider flex items-center gap-1.5">
-                <KeyRound size={13} /> Doctor Access Code
-              </label>
-              <input
-                type="password"
-                placeholder="Enter access code"
-                value={doctorCode}
-                onChange={e => setDoctorCode(e.target.value)}
-                className="w-full bg-slate-800/60 border border-slate-700/80 rounded-2xl px-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:border-blue-500"
-              />
-              {doctorCode.length > 0 && (
-                doctorCode === DOCTOR_SECRET
-                  ? <p className="text-xs text-emerald-400 mt-1.5 flex items-center gap-1"><Check size={12} /> Access granted</p>
-                  : <p className="text-xs text-red-400 mt-1.5 flex items-center gap-1"><X size={12} /> Invalid access code</p>
-              )}
-            </div>
-          )}
 
           <form onSubmit={handleRegister} className="space-y-4">
 
@@ -382,7 +354,7 @@ export default function RegisterPage() {
 
             {/* Submit */}
             <button type="submit"
-              disabled={loading || !allRulesPassed || !passwordsMatch || !doctorCodeOk}
+              disabled={loading || !allRulesPassed || !passwordsMatch}
               className="w-full mt-2 bg-gradient-to-r from-blue-600 via-indigo-600 to-indigo-700 hover:from-blue-500 hover:via-indigo-500 hover:to-indigo-600 text-white font-bold py-3.5 rounded-2xl shadow-lg shadow-indigo-600/30 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed group">
               {loading
                 ? <><div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /><span>Creating Account...</span></>
