@@ -1,9 +1,37 @@
 import Image from 'next/image'
 import Link from 'next/link'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  alternates: {
+    canonical: 'https://kle-appointment-booking.vercel.app',
+  },
+}
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: 'CareSync – KLE Hospital Appointment Booking',
+  url: 'https://kle-appointment-booking.vercel.app',
+  description:
+    "Online appointment booking platform for KLE's Dr. Prabhakar Kore Hospital & Medical Research Centre, Belagavi, Karnataka.",
+  potentialAction: {
+    '@type': 'SearchAction',
+    target: {
+      '@type': 'EntryPoint',
+      urlTemplate: 'https://kle-appointment-booking.vercel.app/register',
+    },
+    'query-input': 'required name=search_term_string',
+  },
+}
 
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-slate-950 text-white">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
 
       {/* Navbar */}
       <nav className="flex items-center justify-between px-6 py-4 border-b border-slate-800 sticky top-0 bg-slate-950/90 backdrop-blur z-50">
