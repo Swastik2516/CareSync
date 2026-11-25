@@ -15,9 +15,9 @@ const appointmentSchema = new Schema({
   },
 
   // ── Treatment (filled by doctor after visit) ──────────────────────────────
-  treatment:  { type: String, default: '' },
-  medicines:  [{ name: String, dosage: String, duration: String }],
-  notes:      { type: String, default: '' },
+  treatment:   { type: String, default: '' },
+  medicines:   [{ name: String, dosage: String, duration: String }],
+  notes:       { type: String, default: '' },
   precautions: { type: String, default: '' },
 
   // ── Patient notifications (in-app) ────────────────────────────────────────

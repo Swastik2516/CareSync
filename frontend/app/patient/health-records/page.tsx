@@ -6,21 +6,23 @@ import PatientSidebar from '@/components/PatientSidebar'
 import apiClient from '@/lib/api'
 import { CalendarDays, FileImage, FileText, Upload, Camera, ExternalLink, Trash2 } from 'lucide-react'
 
+const ALLOWED_TYPES = new Set(['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'])
+
 export default function PatientHealthRecordsPage() {
   const router = useRouter()
   const [reports, setReports] = useState<any[]>([])
   const [name, setName] = useState('')
   const [healthCondition, setHealthCondition] = useState('')
   const [prescribedTablets, setPrescribedTablets] = useState('')
-  const [file, setFile] = useState<{ name: string; type: string; data: string } | null>(null)
+  const [file, setFile] = useState<File | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
 
   const loadReports = () => {
     apiClient.get('/reports')
-      .then(response => setReports(response.data))
-      .catch(error => setMessage(error.response?.data?.error ?? 'Could not load health records'))
+      .then(res => setReports(res.data))
+      .catch(err => setMessage(err.response?.data?.error ?? 'Could not load health records'))
       .finally(() => setLoading(false))
   }
 
@@ -36,9 +38,12 @@ export default function PatientHealthRecordsPage() {
       setMessage('Please choose a file smaller than 10 MB.')
       return
     }
-    const reader = new FileReader()
-    reader.onload = () => setFile({ name: selected.name, type: selected.type || 'application/octet-stream', data: String(reader.result) })
-    reader.readAsDataURL(selected)
+    if (!ALLOWED_TYPES.has(selected.type)) {
+      setMessage('Only PDF, JPG, and PNG files are supported.')
+      return
+    }
+    setFile(selected)
+    setMessage('')
   }
 
   const saveReport = async (event: React.FormEvent) => {
@@ -46,16 +51,40 @@ export default function PatientHealthRecordsPage() {
     if (!file) { setMessage('Please attach a report, document, or photo.'); return }
     setSaving(true)
     setMessage('')
+
     try {
-      await apiClient.post('/reports', { name: name || file.name, fileType: file.type, fileData: file.data, healthCondition, prescribedTablets })
+      // Step 1 — get presigned POST from backend
+      const presignRes = await apiClient.post('/reports/presign-upload', {
+        fileName: file.name,
+        mimeType: file.type,
+        fileSize: file.size,
+        name: name || file.name,
+        healthCondition,
+        prescribedTablets,
+      })
+      const { pendingReportId, uploadUrl, fields } = presignRes.data
+
+      // Step 2 — upload file directly to S3 using the presigned POST
+      const form = new FormData()
+      Object.entries(fields as Record<string, string>).forEach(([k, v]) => form.append(k, v))
+      form.append('file', file) // 'file' must be last field per S3 spec
+
+      const s3Res = await fetch(uploadUrl, { method: 'POST', body: form })
+      if (!s3Res.ok) {
+        throw new Error(`S3 upload failed (${s3Res.status}). Please try again.`)
+      }
+
+      // Step 3 — confirm upload with backend (triggers HeadObject + magic byte check)
+      await apiClient.post('/reports/confirm-upload', { pendingReportId })
+
       setName('')
       setHealthCondition('')
       setPrescribedTablets('')
       setFile(null)
       loadReports()
-      setMessage('✅ Health record added successfully.')
+      setMessage('✅ Health record saved successfully.')
     } catch (error: any) {
-      setMessage(`❌ ${error.response?.data?.error ?? 'Could not save this record'}`)
+      setMessage(`❌ ${error.response?.data?.error ?? error.message ?? 'Could not save this record'}`)
     } finally {
       setSaving(false)
     }
@@ -64,7 +93,7 @@ export default function PatientHealthRecordsPage() {
   const removeReport = async (id: string) => {
     try {
       await apiClient.delete(`/reports/${id}`)
-      setReports(current => current.filter(report => report._id !== id))
+      setReports(current => current.filter(r => r._id !== id))
     } catch (error: any) {
       setMessage(error.response?.data?.error ?? 'Could not remove this record')
     }
@@ -72,10 +101,8 @@ export default function PatientHealthRecordsPage() {
 
   const openFile = async (reportId: string) => {
     try {
-      const res = await apiClient.get(`/reports/${reportId}/file`)
-      if (res.data?.fileUrl) {
-        window.open(res.data.fileUrl, '_blank')
-      }
+      const res = await apiClient.get(`/reports/${reportId}/download`)
+      if (res.data?.fileUrl) window.open(res.data.fileUrl, '_blank')
     } catch (err: any) {
       setMessage(err.response?.data?.error ?? 'Could not open file')
     }
@@ -87,34 +114,33 @@ export default function PatientHealthRecordsPage() {
         <div className="mb-7">
           <p className="text-sm font-semibold text-indigo-600">Personal Health Record</p>
           <h1 className="text-3xl font-bold text-gray-900 mt-1">Reports & Prescriptions</h1>
-          <p className="text-gray-500 mt-2">Upload medical PDFs, Word documents, images, or click a photo with your camera.</p>
+          <p className="text-gray-500 mt-2">Upload medical PDFs or images. Files are stored securely in encrypted cloud storage.</p>
         </div>
 
         <div className="grid lg:grid-cols-[0.9fr_1.1fr] gap-6 items-start">
           <form onSubmit={saveReport} className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm space-y-4">
             <h2 className="font-bold text-gray-900 text-lg">Add a Health Record</h2>
-            <input value={name} onChange={event => setName(event.target.value)} placeholder="Record name (e.g. Blood Test, Prescription)" className="w-full border border-gray-200 rounded-2xl px-4 py-3 outline-none focus:border-indigo-400 text-sm" />
-            <textarea value={healthCondition} onChange={event => setHealthCondition(event.target.value)} placeholder="Health condition or symptoms" rows={2} className="w-full border border-gray-200 rounded-2xl px-4 py-3 outline-none focus:border-indigo-400 text-sm resize-none" />
-            <textarea value={prescribedTablets} onChange={event => setPrescribedTablets(event.target.value)} placeholder="Tablets currently prescribed (if applicable)" rows={2} className="w-full border border-gray-200 rounded-2xl px-4 py-3 outline-none focus:border-indigo-400 text-sm resize-none" />
+            <input value={name} onChange={e => setName(e.target.value)} placeholder="Record name (e.g. Blood Test, Prescription)" className="w-full border border-gray-200 rounded-2xl px-4 py-3 outline-none focus:border-indigo-400 text-sm" />
+            <textarea value={healthCondition} onChange={e => setHealthCondition(e.target.value)} placeholder="Health condition or symptoms" rows={2} className="w-full border border-gray-200 rounded-2xl px-4 py-3 outline-none focus:border-indigo-400 text-sm resize-none" />
+            <textarea value={prescribedTablets} onChange={e => setPrescribedTablets(e.target.value)} placeholder="Tablets currently prescribed (if applicable)" rows={2} className="w-full border border-gray-200 rounded-2xl px-4 py-3 outline-none focus:border-indigo-400 text-sm resize-none" />
 
             <div className="space-y-3">
               <label className="text-xs font-bold text-gray-700">Attach Document or Photo</label>
+              <p className="text-[11px] text-gray-400">Supported: PDF, JPG, PNG · Max 10 MB</p>
 
               <div className="grid grid-cols-2 gap-3">
-                {/* PDF / Word / Image upload button */}
                 <label className="flex flex-col items-center justify-center gap-1 border-2 border-dashed border-indigo-200 hover:border-indigo-500 bg-indigo-50/50 hover:bg-indigo-50 rounded-2xl p-4 text-xs font-bold text-indigo-600 cursor-pointer transition text-center">
                   <Upload size={20} />
                   <span>Choose File</span>
-                  <span className="text-[10px] text-gray-400 font-normal">PDF, Word, PNG, JPG</span>
-                  <input type="file" accept="image/*,.pdf,.doc,.docx" onChange={handleFile} className="hidden" />
+                  <span className="text-[10px] text-gray-400 font-normal">PDF, PNG, JPG</span>
+                  <input type="file" accept=".pdf,image/jpeg,image/png" onChange={handleFile} className="hidden" />
                 </label>
 
-                {/* Camera Photo capture button */}
                 <label className="flex flex-col items-center justify-center gap-1 border-2 border-dashed border-purple-200 hover:border-purple-500 bg-purple-50/50 hover:bg-purple-50 rounded-2xl p-4 text-xs font-bold text-purple-600 cursor-pointer transition text-center">
                   <Camera size={20} />
                   <span>Take Photo</span>
                   <span className="text-[10px] text-gray-400 font-normal">Camera Capture</span>
-                  <input type="file" accept="image/*" capture="environment" onChange={handleFile} className="hidden" />
+                  <input type="file" accept="image/jpeg,image/png" capture="environment" onChange={handleFile} className="hidden" />
                 </label>
               </div>
 
@@ -127,7 +153,9 @@ export default function PatientHealthRecordsPage() {
             </div>
 
             {message && <p className={`text-xs px-4 py-3 rounded-xl ${message.startsWith('✅') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>{message}</p>}
-            <button type="submit" disabled={saving} className="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-2xl hover:bg-indigo-700 disabled:opacity-50 transition shadow-md">{saving ? 'Saving...' : 'Save Health Record'}</button>
+            <button type="submit" disabled={saving} className="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-2xl hover:bg-indigo-700 disabled:opacity-50 transition shadow-md">
+              {saving ? 'Uploading...' : 'Save Health Record'}
+            </button>
           </form>
 
           <section>

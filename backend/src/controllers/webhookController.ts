@@ -108,7 +108,7 @@ export const razorpayWebhook = async (req: Request, res: Response) => {
         console.log(`[Webhook] Payment captured — Appointment ${appointmentId} marked PAID`);
 
         // ── Notify doctor via Socket.IO (no-op on Vercel serverless) ─────
-        console.log(`[Webhook] Payment received — doctor ${appt?.doctorId} notified (Socket.IO disabled on serverless)`);
+        console.log(`[Webhook] Payment received — doctor ${appointment?.doctorId} notified (Socket.IO disabled on serverless)`);
         // Socket.IO real-time push is only active in local/dedicated server mode
       } catch (txErr: any) {
         await session.abortTransaction();

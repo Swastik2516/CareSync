@@ -23,7 +23,6 @@ export default function DoctorAppointmentsPage() {
 
   const [selectedPatient, setSelectedPatient]   = useState<string | null>(null)
   const [reports, setReports]                   = useState<any[]>([])
-  const [reportFiles, setReportFiles]           = useState<Record<string, any>>({})
   const [drafts, setDrafts]                     = useState<Record<string, any>>({})
   const [savingTreatment, setSavingTreatment]   = useState<string | null>(null)
 
@@ -141,15 +140,10 @@ export default function DoctorAppointmentsPage() {
     }
   }
 
-  const viewReport = async (report: any, patientId: string) => {
-    if (reportFiles[report._id]) {
-      window.open(reportFiles[report._id].fileUrl, '_blank')
-      return
-    }
+  const viewReport = async (report: any) => {
     try {
-      const response = await apiClient.get(`/appointments/patient/${patientId}/reports/${report._id}/file`)
-      setReportFiles(previous => ({ ...previous, [report._id]: response.data }))
-      window.open(response.data.fileUrl, '_blank')
+      const response = await apiClient.get(`/reports/${report._id}/download`)
+      if (response.data?.fileUrl) window.open(response.data.fileUrl, '_blank')
     } catch (error: any) {
       alert(error.response?.data?.error ?? 'Could not open report')
     }
@@ -380,7 +374,7 @@ export default function DoctorAppointmentsPage() {
                                   </p>
                                 </div>
                                 <button
-                                  onClick={() => viewReport(report, a.patientId?._id)}
+                                  onClick={() => viewReport(report)}
                                   className="text-xs font-bold text-indigo-600 hover:underline bg-indigo-50 px-3 py-1 rounded-lg"
                                 >
                                   Open File

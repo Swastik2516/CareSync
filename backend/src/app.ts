@@ -60,7 +60,7 @@ app.use('/api/reports',      reportRoutes);
 app.get('/health', (_req, res) => res.status(200).send('CareSync API running'));
 
 // ── Local dev server (not used on Vercel) ────────────────────────────────────
-if (process.env.NODE_ENV !== 'production') {
+if (process.env.NODE_ENV !== 'production' && process.env.NODE_ENV !== 'test') {
   const PORT = Number(process.env.PORT) || 8080;
   app.listen(PORT, () => console.log(`CareSync Backend running on port ${PORT}`));
 }

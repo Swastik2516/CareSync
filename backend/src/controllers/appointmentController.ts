@@ -10,7 +10,7 @@ import { cleanPastAvailability } from './doctorController';
 const ACTIVE   = ['PENDING', 'CONFIRMED'];
 const TERMINAL = ['COMPLETED', 'CANCELLED', 'MISSED', 'RESCHEDULED'];
 
-// ── Auto Expire Missed Appointments ─────────────────────────────────────────
+// ── Auto Expire Missed Appointments ──────────────────────────────────────────
 export const autoExpireAppointments = async () => {
   try {
     const now = new Date();
@@ -21,9 +21,7 @@ export const autoExpireAppointments = async () => {
       timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: false,
     }).format(now).replace(' ', ':');
 
-    const activeAppts = await Appointment.find({
-      status: { $in: ACTIVE }
-    }).populate('doctorId', 'name');
+    const activeAppts = await Appointment.find({ status: { $in: ACTIVE } }).populate('doctorId', 'name');
 
     for (const appt of activeAppts) {
       let isExpired = false;
@@ -33,18 +31,15 @@ export const autoExpireAppointments = async () => {
         const [hhStr, mmStr] = appt.timeSlot.split(':');
         const endHour = parseInt(hhStr, 10) + 1;
         const endTimeStr = `${String(endHour).padStart(2, '0')}:${mmStr || '00'}`;
-        if (currentHHMM >= endTimeStr) {
-          isExpired = true;
-        }
+        if (currentHHMM >= endTimeStr) isExpired = true;
       }
-
       if (isExpired) {
         appt.status = 'MISSED';
         const docName = (appt.doctorId as any)?.name || 'Doctor';
         appt.notifications.push({
           message: `Your appointment with Dr. ${docName} on ${appt.date} at ${appt.timeSlot} was missed as the scheduled time limit passed. Please reschedule your appointment.`,
           read: false,
-          createdAt: new Date()
+          createdAt: new Date(),
         });
         await appt.save();
       }
@@ -80,7 +75,6 @@ export const bookAppointment = async (req: AuthRequest, res: Response) => {
       await session.abortTransaction();
       return res.status(400).json({ error: 'Cannot book appointments for past dates.' });
     }
-
     if (date === todayStr && timeSlot < currentHHMM) {
       await session.abortTransaction();
       return res.status(400).json({ error: 'This time slot has already passed. Please select a future time slot.' });
@@ -94,7 +88,7 @@ export const bookAppointment = async (req: AuthRequest, res: Response) => {
     }
 
     const activeCount = await Appointment.countDocuments({
-      doctorId, date, timeSlot, status: { $in: ACTIVE }
+      doctorId, date, timeSlot, status: { $in: ACTIVE },
     }).session(session);
 
     if (activeCount >= 10) {
@@ -123,7 +117,7 @@ export const bookAppointment = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// ── Patient: reschedule appointment ─────────────────────────────────────────
+// ── Patient: reschedule appointment ──────────────────────────────────────────
 export const rescheduleAppointment = async (req: AuthRequest, res: Response) => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -150,7 +144,6 @@ export const rescheduleAppointment = async (req: AuthRequest, res: Response) => 
       await session.abortTransaction();
       return res.status(400).json({ error: 'Cannot reschedule to a past date.' });
     }
-
     if (newDate === todayStr && newTimeSlot < currentHHMM) {
       await session.abortTransaction();
       return res.status(400).json({ error: 'This time slot has already passed. Please select a future time slot.' });
@@ -163,11 +156,8 @@ export const rescheduleAppointment = async (req: AuthRequest, res: Response) => 
     }
 
     const activeCount = await Appointment.countDocuments({
-      doctorId: appointment.doctorId,
-      date: newDate,
-      timeSlot: newTimeSlot,
-      status: { $in: ACTIVE },
-      _id: { $ne: appointment._id }
+      doctorId: appointment.doctorId, date: newDate, timeSlot: newTimeSlot,
+      status: { $in: ACTIVE }, _id: { $ne: appointment._id },
     }).session(session);
 
     if (activeCount >= 10) {
@@ -181,12 +171,11 @@ export const rescheduleAppointment = async (req: AuthRequest, res: Response) => 
     appointment.notifications.push({
       message: `Your appointment has been successfully rescheduled for ${newDate} at ${newTimeSlot}.`,
       read: false,
-      createdAt: new Date()
+      createdAt: new Date(),
     });
 
     await appointment.save({ session });
     await session.commitTransaction();
-
     return res.json({ message: 'Appointment rescheduled successfully', appointment });
   } catch (error: any) {
     await session.abortTransaction();
@@ -212,7 +201,7 @@ export const getPatientAppointments = async (req: AuthRequest, res: Response) =>
   }
 };
 
-// ── Patient: history (completed / cancelled / missed) ─────────────────────────
+// ── Patient: history ──────────────────────────────────────────────────────────
 export const getPatientHistory = async (req: AuthRequest, res: Response) => {
   try {
     await autoExpireAppointments();
@@ -241,15 +230,15 @@ export const getPatientNotifications = async (req: AuthRequest, res: Response) =
         .filter((n: any) => !n.read)
         .forEach((n: any) => {
           notifications.push({
-            appointmentId: a._id,
+            appointmentId:  a._id,
             appointmentRef: a.appointmentId,
-            doctorId: (a.doctorId as any)?._id || a.doctorId,
-            doctorName: (a.doctorId as any)?.name || 'Doctor',
-            date: a.date,
-            timeSlot: a.timeSlot,
-            message: n.message,
-            notifId: n._id,
-            createdAt: n.createdAt,
+            doctorId:       (a.doctorId as any)?._id || a.doctorId,
+            doctorName:     (a.doctorId as any)?.name || 'Doctor',
+            date:           a.date,
+            timeSlot:       a.timeSlot,
+            message:        n.message,
+            notifId:        n._id,
+            createdAt:      n.createdAt,
           });
         });
     });
@@ -272,7 +261,7 @@ export const markNotificationRead = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// ── Doctor: active appointments (today and future only) ───────────────────────
+// ── Doctor: active appointments ───────────────────────────────────────────────
 export const getDoctorAppointments = async (req: AuthRequest, res: Response) => {
   try {
     await autoExpireAppointments();
@@ -288,7 +277,7 @@ export const getDoctorAppointments = async (req: AuthRequest, res: Response) => 
   }
 };
 
-// ── Doctor: history (optional date filter) ────────────────────────────────────
+// ── Doctor: history ───────────────────────────────────────────────────────────
 export const getDoctorHistory = async (req: AuthRequest, res: Response) => {
   try {
     const { date } = req.query;
@@ -303,7 +292,7 @@ export const getDoctorHistory = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// ── Doctor: update status (allows early completion WITH a reason) ────────────
+// ── Doctor: update status ─────────────────────────────────────────────────────
 export const updateAppointmentStatus = async (req: AuthRequest, res: Response) => {
   try {
     const { status, earlyReason } = req.body;
@@ -326,7 +315,7 @@ export const updateAppointmentStatus = async (req: AuthRequest, res: Response) =
       if (isFutureDate || isTodayBeforeSlot) {
         if (!earlyReason || !earlyReason.trim()) {
           return res.status(400).json({
-            error: `This appointment is scheduled for ${appointment.date} at ${appointment.timeSlot}. Please provide a reason for early completion.`
+            error: `This appointment is scheduled for ${appointment.date} at ${appointment.timeSlot}. Please provide a reason for early completion.`,
           });
         }
         appointment.notes = appointment.notes
@@ -337,11 +326,10 @@ export const updateAppointmentStatus = async (req: AuthRequest, res: Response) =
 
     appointment.status = status;
     if (status === 'CANCELLED') {
-      const docName = (appointment as any).doctorId?.name || 'Doctor';
       appointment.notifications.push({
         message: `Your appointment on ${appointment.date} at ${appointment.timeSlot} has been cancelled by the doctor. Please reschedule at your convenience.`,
         read: false,
-        createdAt: new Date()
+        createdAt: new Date(),
       });
     }
     await appointment.save();
@@ -351,7 +339,7 @@ export const updateAppointmentStatus = async (req: AuthRequest, res: Response) =
   }
 };
 
-// ── Doctor: mark payment paid (cash/clinic payment) ─────────────────────────
+// ── Doctor: mark payment paid ─────────────────────────────────────────────────
 export const markPaymentPaid = async (req: AuthRequest, res: Response) => {
   try {
     const { paymentMode } = req.body;
@@ -367,11 +355,10 @@ export const markPaymentPaid = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// ── Doctor: save treatment + medicines ───────────────────────────────────────
+// ── Doctor: save treatment ────────────────────────────────────────────────────
 export const saveTreatment = async (req: AuthRequest, res: Response) => {
   try {
     const { treatment, medicines, notes, precautions } = req.body;
-    // medicines: [{ name, dosage, duration }]
     const appointment = await Appointment.findOneAndUpdate(
       { _id: req.params.id, doctorId: req.user?.userId },
       { $set: { treatment, medicines: medicines ?? [], notes, precautions: precautions ?? '' } },
@@ -384,33 +371,56 @@ export const saveTreatment = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// ── Doctor: list patient's reports (only if linked by appointment) ────────────
+// ── Doctor: list patient reports (COMPLETED appointments only) ────────────────
+// A doctor can only view reports of patients who have actually visited them.
+// Having a future/active appointment is not sufficient.
 export const getPatientReportsForDoctor = async (req: AuthRequest, res: Response) => {
   try {
-    const linked = await Appointment.exists({ doctorId: req.user?.userId, patientId: req.params.patientId });
-    if (!linked) return res.status(403).json({ error: 'No appointment found with this patient' });
-    const reports = await MedicalReport.find({ patientId: req.params.patientId })
-      .select('-fileData').sort({ uploadedAt: -1 });
+    const linked = await Appointment.exists({
+      doctorId:  req.user?.userId,
+      patientId: req.params.patientId,
+      status:    'COMPLETED',
+    });
+    if (!linked) return res.status(403).json({ error: 'No completed appointment found with this patient' });
+    const reports = await MedicalReport.find({
+      patientId:    req.params.patientId,
+      uploadStatus: { $in: ['verified', 'uploaded'] },
+    })
+      .select('-publicId -s3Key -presignExpiresAt -fileData')
+      .sort({ uploadedAt: -1 });
     return res.json(reports);
   } catch (error: any) {
     return res.status(500).json({ error: error.message });
   }
 };
 
-// ── Doctor: get a specific patient report file ────────────────────────────────
+// ── Doctor: get specific patient report file (COMPLETED appointments only) ────
 export const getPatientReportFileForDoctor = async (req: AuthRequest, res: Response) => {
   try {
-    const linked = await Appointment.exists({ doctorId: req.user?.userId, patientId: req.params.patientId });
-    if (!linked) return res.status(403).json({ error: 'No appointment found with this patient' });
+    const linked = await Appointment.exists({
+      doctorId:  req.user?.userId,
+      patientId: req.params.patientId,
+      status:    'COMPLETED',
+    });
+    if (!linked) return res.status(403).json({ error: 'No completed appointment found with this patient' });
     const report = await MedicalReport.findOne({ _id: req.params.reportId, patientId: req.params.patientId });
     if (!report) return res.status(404).json({ error: 'Report not found' });
+
+    if (report.storageProvider === 's3') {
+      return res.status(200).json({
+        message:     'Use GET /api/reports/:id/download for S3 files.',
+        downloadUrl: `/api/reports/${report._id}/download`,
+        reportId:    report._id,
+      });
+    }
+
     return res.json({
-      fileUrl:          report.fileUrl,
-      fileType:         report.fileType,
-      name:             report.name,
-      healthCondition:  report.healthCondition,
+      fileUrl:           report.fileUrl,
+      fileType:          report.fileType,
+      name:              report.name,
+      healthCondition:   report.healthCondition,
       prescribedTablets: report.prescribedTablets,
-      uploadedAt:       report.uploadedAt,
+      uploadedAt:        report.uploadedAt,
     });
   } catch (error: any) {
     return res.status(500).json({ error: error.message });
