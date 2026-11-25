@@ -25,17 +25,18 @@ const PENDING_TTL_MS = 10 * 60 * 1000;
 
 // ── Zod validation schemas ────────────────────────────────────────────────────
 const presignUploadSchema = z.object({
-  fileName:    z.string().min(1).max(200),
-  mimeType:    z.string().refine(
+  fileName:           z.string().min(1).max(200),
+  mimeType:           z.string().refine(
     (v) => ALLOWED_MIME_TYPES.has(v),
     { message: `Allowed types: ${[...ALLOWED_MIME_TYPES].join(', ')}` }
   ),
-  fileSize:    z.number().int().min(1).max(MAX_FILE_SIZE_BYTES, {
+  fileSize:           z.number().int().min(1).max(MAX_FILE_SIZE_BYTES, {
     message: `File size must not exceed ${MAX_FILE_SIZE_BYTES} bytes (10 MB)`,
   }),
-  name:              z.string().min(1).max(200),
-  healthCondition:   z.string().max(500).optional().default(''),
-  prescribedTablets: z.string().max(500).optional().default(''),
+  name:               z.string().min(1).max(200),
+  sharedWithDoctorId: z.string().min(1, { message: 'You must select a doctor to share this record with.' }),
+  healthCondition:    z.string().max(500).optional().default(''),
+  prescribedTablets:  z.string().max(500).optional().default(''),
 });
 
 const confirmUploadSchema = z.object({
@@ -107,8 +108,13 @@ export const presignUpload = async (req: AuthRequest, res: Response) => {
     return res.status(400).json({ error: parsed.error.flatten().fieldErrors });
   }
 
-  const { fileName, mimeType, fileSize, name, healthCondition, prescribedTablets } = parsed.data;
+  const { fileName, mimeType, fileSize, name, sharedWithDoctorId, healthCondition, prescribedTablets } = parsed.data;
   const patientId = req.user!.userId;
+
+  // Validate sharedWithDoctorId is a valid ObjectId
+  if (!mongoose.Types.ObjectId.isValid(sharedWithDoctorId)) {
+    return res.status(400).json({ error: 'Invalid doctor ID.' });
+  }
 
   try {
     // Generate opaque key — no patient name, email or diagnosis in the path.
@@ -119,19 +125,20 @@ export const presignUpload = async (req: AuthRequest, res: Response) => {
     const pendingReport = await MedicalReport.create({
       patientId,
       name,
-      fileType:          mimeType,
-      fileUrl:           '',          // empty — S3 record
-      publicId:          '',          // empty — S3 record
+      fileType:           mimeType,
+      fileUrl:            '',
+      publicId:           '',
       healthCondition,
       prescribedTablets,
-      storageProvider:   's3',
+      storageProvider:    's3',
       s3Key,
-      originalFileName:  sanitiseFileName(fileName),
+      originalFileName:   sanitiseFileName(fileName),
       mimeType,
       fileSize,
-      uploadedBy:        new mongoose.Types.ObjectId(patientId),
-      uploadStatus:      'pending',
-      presignExpiresAt:  new Date(Date.now() + PENDING_TTL_MS),
+      uploadedBy:         new mongoose.Types.ObjectId(patientId),
+      uploadStatus:       'pending',
+      sharedWithDoctorId: new mongoose.Types.ObjectId(sharedWithDoctorId),
+      presignExpiresAt:   new Date(Date.now() + PENDING_TTL_MS),
     });
 
     const presignedPost = await createS3PresignedPost(s3Key, mimeType, fileSize);
@@ -357,15 +364,10 @@ export const downloadReport = async (req: AuthRequest, res: Response) => {
         return res.status(403).json({ error: 'Access denied.' });
       }
     } else if (role === 'DOCTOR') {
-      // Doctors can only access reports of patients whose appointment is COMPLETED.
-      const linked = await Appointment.exists({
-        doctorId:  userId,
-        patientId: report.patientId,
-        status:    'COMPLETED',
-      });
-      if (!linked) {
+      // Doctor can only download if this report was explicitly shared with them.
+      if (!report.sharedWithDoctorId || report.sharedWithDoctorId.toString() !== userId) {
         auditLog('download_unauthorized_doctor', { userId, reportId: id, patientId: report.patientId });
-        return res.status(403).json({ error: 'No appointment relationship with this patient.' });
+        return res.status(403).json({ error: 'This report has not been shared with you.' });
       }
     } else {
       return res.status(403).json({ error: 'Access denied.' });

@@ -1,9 +1,10 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import { MedicalReport } from '../models/MedicalReport';
+import { deleteS3Object } from '../services/s3Service';
+import { isS3Configured } from '../config/s3';
 
-// ── POST / — Deprecated: Cloudinary upload removed, use S3 flow ───────────────
-// Clients should use POST /presign-upload → S3 upload → POST /confirm-upload.
+// ── POST / — Deprecated: use S3 flow ─────────────────────────────────────────
 export const uploadReport = async (_req: AuthRequest, res: Response) => {
   return res.status(410).json({
     error: 'Direct upload is no longer supported. Use POST /api/reports/presign-upload instead.',
@@ -15,8 +16,6 @@ export const getMyReports = async (req: AuthRequest, res: Response) => {
   try {
     const reports = await MedicalReport.find({
       patientId:    req.user?.userId,
-      // Return all verified reports regardless of storage provider.
-      // Pending/uploaded S3 records are excluded until confirmed.
       uploadStatus: { $in: ['verified', 'uploaded'] },
     })
       .select('-publicId -s3Key -presignExpiresAt')
@@ -27,9 +26,7 @@ export const getMyReports = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// ── GET /:id/file — Legacy Cloudinary file access (existing behavior) ─────────
-// This endpoint is kept for backward compatibility with the existing frontend.
-// New S3 files should use GET /api/reports/:id/download instead.
+// ── GET /:id/file — Legacy file access ────────────────────────────────────────
 export const getReportFile = async (req: AuthRequest, res: Response) => {
   try {
     const report = await MedicalReport.findOne({
@@ -38,7 +35,6 @@ export const getReportFile = async (req: AuthRequest, res: Response) => {
     });
     if (!report) return res.status(404).json({ error: 'Report not found' });
 
-    // For S3 reports, redirect to the new download endpoint.
     if (report.storageProvider === 's3') {
       return res.status(301).json({
         message:     'Use GET /api/reports/:id/download for S3 files.',
@@ -52,7 +48,7 @@ export const getReportFile = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// ── DELETE /:id — Delete report ──────────────────────────────────────────────
+// ── DELETE /:id — Hard delete from S3 + MongoDB ───────────────────────────────
 export const deleteReport = async (req: AuthRequest, res: Response) => {
   try {
     const report = await MedicalReport.findOne({
@@ -61,10 +57,18 @@ export const deleteReport = async (req: AuthRequest, res: Response) => {
     });
     if (!report) return res.status(404).json({ error: 'Report not found' });
 
-    // Soft-delete: mark rejected so it disappears from lists.
-    // Physical S3 deletion requires a DeleteObject IAM policy update.
-    await MedicalReport.findByIdAndUpdate(req.params.id, { uploadStatus: 'rejected' });
-    return res.json({ message: 'Report deleted.' });
+    // Hard delete S3 object if configured and key exists
+    if (report.storageProvider === 's3' && report.s3Key && isS3Configured()) {
+      try {
+        await deleteS3Object(report.s3Key);
+      } catch (s3Err: any) {
+        // Log but don't block — still remove MongoDB record
+        console.error('[deleteReport] S3 delete failed:', s3Err.message);
+      }
+    }
+
+    await report.deleteOne();
+    return res.json({ message: 'Report permanently deleted.' });
   } catch (error: any) {
     return res.status(500).json({ error: error.message });
   }

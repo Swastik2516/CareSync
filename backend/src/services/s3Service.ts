@@ -4,6 +4,7 @@ import {
   GetObjectCommand,
   HeadObjectCommand,
   HeadObjectCommandOutput,
+  DeleteObjectCommand,
   PutObjectCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
@@ -178,6 +179,12 @@ export const getObjectMetadata = async (
     }
     throw err;
   }
+};
+
+// ── Delete S3 object ───────────────────────────────────────────────────────────────
+export const deleteS3Object = async (s3Key: string): Promise<void> => {
+  const command = new DeleteObjectCommand({ Bucket: getS3Bucket(), Key: s3Key });
+  await getS3Client().send(command);
 };
 
 // ── Legacy presigned PUT URL (kept for connectivity test script only) ─────────

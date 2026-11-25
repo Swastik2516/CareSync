@@ -4,20 +4,22 @@ import { ChangeEvent, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import PatientSidebar from '@/components/PatientSidebar'
 import apiClient from '@/lib/api'
-import { CalendarDays, FileImage, FileText, Upload, Camera, ExternalLink, Trash2 } from 'lucide-react'
+import { CalendarDays, FileImage, FileText, Upload, Camera, ExternalLink, Trash2, UserCheck } from 'lucide-react'
 
 const ALLOWED_TYPES = new Set(['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'])
 
 export default function PatientHealthRecordsPage() {
   const router = useRouter()
-  const [reports, setReports] = useState<any[]>([])
-  const [name, setName] = useState('')
-  const [healthCondition, setHealthCondition] = useState('')
+  const [reports, setReports]               = useState<any[]>([])
+  const [doctors, setDoctors]               = useState<any[]>([])
+  const [name, setName]                     = useState('')
+  const [healthCondition, setHealthCondition]     = useState('')
   const [prescribedTablets, setPrescribedTablets] = useState('')
-  const [file, setFile] = useState<File | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [message, setMessage] = useState('')
+  const [selectedDoctorId, setSelectedDoctorId]   = useState('')
+  const [file, setFile]                     = useState<File | null>(null)
+  const [loading, setLoading]               = useState(true)
+  const [saving, setSaving]                 = useState(false)
+  const [message, setMessage]               = useState('')
 
   const loadReports = () => {
     apiClient.get('/reports')
@@ -26,22 +28,30 @@ export default function PatientHealthRecordsPage() {
       .finally(() => setLoading(false))
   }
 
+  // Fetch all available doctors so patient can share with any doctor
+  const loadDoctors = () => {
+    apiClient.get('/doctors')
+      .then(res => {
+        const list = (res.data || []).map((d: any) => ({
+          _id:  d.userId?._id ?? d.userId,
+          name: d.userId?.name ?? 'Unknown',
+        }))
+        setDoctors(list)
+      })
+      .catch(() => {})
+  }
+
   useEffect(() => {
     if (!localStorage.getItem('token')) { router.push('/login'); return }
     loadReports()
+    loadDoctors()
   }, [])
 
   const handleFile = (event: ChangeEvent<HTMLInputElement>) => {
     const selected = event.target.files?.[0]
     if (!selected) return
-    if (selected.size > 10 * 1024 * 1024) {
-      setMessage('Please choose a file smaller than 10 MB.')
-      return
-    }
-    if (!ALLOWED_TYPES.has(selected.type)) {
-      setMessage('Only PDF, JPG, and PNG files are supported.')
-      return
-    }
+    if (selected.size > 10 * 1024 * 1024) { setMessage('Please choose a file smaller than 10 MB.'); return }
+    if (!ALLOWED_TYPES.has(selected.type)) { setMessage('Only PDF, JPG, and PNG files are supported.'); return }
     setFile(selected)
     setMessage('')
   }
@@ -49,40 +59,39 @@ export default function PatientHealthRecordsPage() {
   const saveReport = async (event: React.FormEvent) => {
     event.preventDefault()
     if (!file) { setMessage('Please attach a report, document, or photo.'); return }
+    if (!selectedDoctorId) { setMessage('Please select the doctor to share this record with.'); return }
     setSaving(true)
     setMessage('')
-
     try {
-      // Step 1 — get presigned POST from backend
+      // Step 1 — get presigned POST
       const presignRes = await apiClient.post('/reports/presign-upload', {
-        fileName: file.name,
-        mimeType: file.type,
-        fileSize: file.size,
-        name: name || file.name,
+        fileName:           file.name,
+        mimeType:           file.type,
+        fileSize:           file.size,
+        name:               name || file.name,
+        sharedWithDoctorId: selectedDoctorId,
         healthCondition,
         prescribedTablets,
       })
       const { pendingReportId, uploadUrl, fields } = presignRes.data
 
-      // Step 2 — upload file directly to S3 using the presigned POST
+      // Step 2 — upload directly to S3
       const form = new FormData()
       Object.entries(fields as Record<string, string>).forEach(([k, v]) => form.append(k, v))
-      form.append('file', file) // 'file' must be last field per S3 spec
-
+      form.append('file', file)
       const s3Res = await fetch(uploadUrl, { method: 'POST', body: form })
-      if (!s3Res.ok) {
-        throw new Error(`S3 upload failed (${s3Res.status}). Please try again.`)
-      }
+      if (!s3Res.ok) throw new Error(`S3 upload failed (${s3Res.status}). Please try again.`)
 
-      // Step 3 — confirm upload with backend (triggers HeadObject + magic byte check)
+      // Step 3 — confirm with backend
       await apiClient.post('/reports/confirm-upload', { pendingReportId })
 
       setName('')
       setHealthCondition('')
       setPrescribedTablets('')
+      setSelectedDoctorId('')
       setFile(null)
       loadReports()
-      setMessage('✅ Health record saved successfully.')
+      setMessage('✅ Health record saved and shared with your doctor.')
     } catch (error: any) {
       setMessage(`❌ ${error.response?.data?.error ?? error.message ?? 'Could not save this record'}`)
     } finally {
@@ -91,9 +100,11 @@ export default function PatientHealthRecordsPage() {
   }
 
   const removeReport = async (id: string) => {
+    if (!confirm('Permanently delete this record? This cannot be undone.')) return
     try {
       await apiClient.delete(`/reports/${id}`)
       setReports(current => current.filter(r => r._id !== id))
+      setMessage('Record permanently deleted.')
     } catch (error: any) {
       setMessage(error.response?.data?.error ?? 'Could not remove this record')
     }
@@ -114,20 +125,42 @@ export default function PatientHealthRecordsPage() {
         <div className="mb-7">
           <p className="text-sm font-semibold text-indigo-600">Personal Health Record</p>
           <h1 className="text-3xl font-bold text-gray-900 mt-1">Reports & Prescriptions</h1>
-          <p className="text-gray-500 mt-2">Upload medical PDFs or images. Files are stored securely in encrypted cloud storage.</p>
+          <p className="text-gray-500 mt-2">Upload medical files and share them with your consulting doctor. Only the selected doctor can view the record.</p>
         </div>
 
         <div className="grid lg:grid-cols-[0.9fr_1.1fr] gap-6 items-start">
           <form onSubmit={saveReport} className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm space-y-4">
             <h2 className="font-bold text-gray-900 text-lg">Add a Health Record</h2>
+
             <input value={name} onChange={e => setName(e.target.value)} placeholder="Record name (e.g. Blood Test, Prescription)" className="w-full border border-gray-200 rounded-2xl px-4 py-3 outline-none focus:border-indigo-400 text-sm" />
+
+            {/* Doctor selector */}
+            <div>
+              <label className="text-xs font-bold text-gray-700 mb-1 block">Share with Doctor <span className="text-red-500">*</span></label>
+              {doctors.length === 0 ? (
+                <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-2xl px-4 py-3">
+                  No doctors available at the moment.
+                </p>
+              ) : (
+                <select
+                  value={selectedDoctorId}
+                  onChange={e => setSelectedDoctorId(e.target.value)}
+                  className="w-full border border-gray-200 rounded-2xl px-4 py-3 outline-none focus:border-indigo-400 text-sm bg-white"
+                >
+                  <option value="">— Select a doctor —</option>
+                  {doctors.map(d => (
+                    <option key={d._id} value={d._id}>Dr. {d.name}</option>
+                  ))}
+                </select>
+              )}
+            </div>
+
             <textarea value={healthCondition} onChange={e => setHealthCondition(e.target.value)} placeholder="Health condition or symptoms" rows={2} className="w-full border border-gray-200 rounded-2xl px-4 py-3 outline-none focus:border-indigo-400 text-sm resize-none" />
             <textarea value={prescribedTablets} onChange={e => setPrescribedTablets(e.target.value)} placeholder="Tablets currently prescribed (if applicable)" rows={2} className="w-full border border-gray-200 rounded-2xl px-4 py-3 outline-none focus:border-indigo-400 text-sm resize-none" />
 
             <div className="space-y-3">
               <label className="text-xs font-bold text-gray-700">Attach Document or Photo</label>
               <p className="text-[11px] text-gray-400">Supported: PDF, JPG, PNG · Max 10 MB</p>
-
               <div className="grid grid-cols-2 gap-3">
                 <label className="flex flex-col items-center justify-center gap-1 border-2 border-dashed border-indigo-200 hover:border-indigo-500 bg-indigo-50/50 hover:bg-indigo-50 rounded-2xl p-4 text-xs font-bold text-indigo-600 cursor-pointer transition text-center">
                   <Upload size={20} />
@@ -135,7 +168,6 @@ export default function PatientHealthRecordsPage() {
                   <span className="text-[10px] text-gray-400 font-normal">PDF, PNG, JPG</span>
                   <input type="file" accept=".pdf,image/jpeg,image/png" onChange={handleFile} className="hidden" />
                 </label>
-
                 <label className="flex flex-col items-center justify-center gap-1 border-2 border-dashed border-purple-200 hover:border-purple-500 bg-purple-50/50 hover:bg-purple-50 rounded-2xl p-4 text-xs font-bold text-purple-600 cursor-pointer transition text-center">
                   <Camera size={20} />
                   <span>Take Photo</span>
@@ -143,7 +175,6 @@ export default function PatientHealthRecordsPage() {
                   <input type="file" accept="image/jpeg,image/png" capture="environment" onChange={handleFile} className="hidden" />
                 </label>
               </div>
-
               {file && (
                 <div className="flex items-center justify-between bg-indigo-50 p-3 rounded-2xl text-xs text-indigo-900 border border-indigo-100">
                   <span className="font-semibold truncate max-w-[200px]">{file.name}</span>
@@ -154,7 +185,7 @@ export default function PatientHealthRecordsPage() {
 
             {message && <p className={`text-xs px-4 py-3 rounded-xl ${message.startsWith('✅') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>{message}</p>}
             <button type="submit" disabled={saving} className="w-full bg-indigo-600 text-white font-bold py-3.5 rounded-2xl hover:bg-indigo-700 disabled:opacity-50 transition shadow-md">
-              {saving ? 'Uploading...' : 'Save Health Record'}
+              {saving ? 'Uploading...' : 'Save & Share Health Record'}
             </button>
           </form>
 
@@ -168,41 +199,42 @@ export default function PatientHealthRecordsPage() {
               </div>
             ) : (
               <div className="grid gap-3">
-                {reports.map(report => (
-                  <article key={report._id} className="bg-white border border-gray-100 rounded-3xl p-5 shadow-sm hover:shadow-md transition">
-                    <div className="flex justify-between items-start gap-4">
-                      <div className="flex gap-3 min-w-0">
-                        <div className="bg-indigo-100 text-indigo-600 p-2.5 rounded-2xl h-fit shrink-0">
-                          {report.fileType?.startsWith('image/') ? <FileImage size={22} /> : <FileText size={22} />}
+                {reports.map(report => {
+                  const sharedDoctor = doctors.find(d => d._id === report.sharedWithDoctorId)
+                  return (
+                    <article key={report._id} className="bg-white border border-gray-100 rounded-3xl p-5 shadow-sm hover:shadow-md transition">
+                      <div className="flex justify-between items-start gap-4">
+                        <div className="flex gap-3 min-w-0">
+                          <div className="bg-indigo-100 text-indigo-600 p-2.5 rounded-2xl h-fit shrink-0">
+                            {report.fileType?.startsWith('image/') ? <FileImage size={22} /> : <FileText size={22} />}
+                          </div>
+                          <div className="min-w-0">
+                            <h3 className="font-bold text-gray-900 truncate text-base">{report.name}</h3>
+                            <p className="text-xs text-gray-400 flex items-center gap-1 mt-1">
+                              <CalendarDays size={13} /> Uploaded {new Date(report.uploadedAt).toLocaleDateString()}
+                            </p>
+                            {report.sharedWithDoctorId && (
+                              <p className="text-xs text-indigo-600 flex items-center gap-1 mt-1">
+                                <UserCheck size={13} />
+                                {sharedDoctor ? `Shared with Dr. ${sharedDoctor.name}` : 'Shared with your doctor'}
+                              </p>
+                            )}
+                          </div>
                         </div>
-                        <div className="min-w-0">
-                          <h3 className="font-bold text-gray-900 truncate text-base">{report.name}</h3>
-                          <p className="text-xs text-gray-400 flex items-center gap-1 mt-1">
-                            <CalendarDays size={13} /> Uploaded {new Date(report.uploadedAt).toLocaleDateString()}
-                          </p>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button onClick={() => openFile(report._id)} className="flex items-center gap-1 text-xs font-bold text-indigo-600 hover:bg-indigo-50 px-3 py-1.5 rounded-xl border border-indigo-200 transition">
+                            <ExternalLink size={13} /> Open
+                          </button>
+                          <button onClick={() => removeReport(report._id)} aria-label={`Remove ${report.name}`} className="text-gray-400 hover:text-red-500 p-1.5 rounded-xl hover:bg-red-50 transition">
+                            <Trash2 size={16} />
+                          </button>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <button
-                          onClick={() => openFile(report._id)}
-                          className="flex items-center gap-1 text-xs font-bold text-indigo-600 hover:bg-indigo-50 px-3 py-1.5 rounded-xl border border-indigo-200 transition"
-                        >
-                          <ExternalLink size={13} />
-                          Open
-                        </button>
-                        <button
-                          onClick={() => removeReport(report._id)}
-                          aria-label={`Remove ${report.name}`}
-                          className="text-gray-400 hover:text-red-500 p-1.5 rounded-xl hover:bg-red-50 transition"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </div>
-                    {report.healthCondition && <p className="text-sm text-gray-600 mt-4"><span className="font-semibold text-gray-800">Condition:</span> {report.healthCondition}</p>}
-                    {report.prescribedTablets && <p className="text-sm text-gray-600 mt-1"><span className="font-semibold text-gray-800">Tablets:</span> {report.prescribedTablets}</p>}
-                  </article>
-                ))}
+                      {report.healthCondition && <p className="text-sm text-gray-600 mt-4"><span className="font-semibold text-gray-800">Condition:</span> {report.healthCondition}</p>}
+                      {report.prescribedTablets && <p className="text-sm text-gray-600 mt-1"><span className="font-semibold text-gray-800">Tablets:</span> {report.prescribedTablets}</p>}
+                    </article>
+                  )
+                })}
               </div>
             )}
           </section>

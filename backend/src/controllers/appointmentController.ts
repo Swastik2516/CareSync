@@ -371,9 +371,7 @@ export const saveTreatment = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// ── Doctor: list patient reports (COMPLETED appointments only) ────────────────
-// A doctor can only view reports of patients who have actually visited them.
-// Having a future/active appointment is not sufficient.
+// ── Doctor: list patient reports shared with this doctor ───────────────────────
 export const getPatientReportsForDoctor = async (req: AuthRequest, res: Response) => {
   try {
     const linked = await Appointment.exists({
@@ -383,8 +381,9 @@ export const getPatientReportsForDoctor = async (req: AuthRequest, res: Response
     });
     if (!linked) return res.status(403).json({ error: 'No completed appointment found with this patient' });
     const reports = await MedicalReport.find({
-      patientId:    req.params.patientId,
-      uploadStatus: { $in: ['verified', 'uploaded'] },
+      patientId:          req.params.patientId,
+      sharedWithDoctorId: req.user?.userId,
+      uploadStatus:       { $in: ['verified', 'uploaded'] },
     })
       .select('-publicId -s3Key -presignExpiresAt -fileData')
       .sort({ uploadedAt: -1 });
@@ -394,7 +393,7 @@ export const getPatientReportsForDoctor = async (req: AuthRequest, res: Response
   }
 };
 
-// ── Doctor: get specific patient report file (COMPLETED appointments only) ────
+// ── Doctor: get specific patient report file shared with this doctor ───────────
 export const getPatientReportFileForDoctor = async (req: AuthRequest, res: Response) => {
   try {
     const linked = await Appointment.exists({

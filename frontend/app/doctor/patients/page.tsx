@@ -3,13 +3,17 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import DoctorSidebar from '@/components/DoctorSidebar'
 import apiClient from '@/lib/api'
-import { Users, Mail, CalendarDays } from 'lucide-react'
+import { Users, Mail, CalendarDays, FileText, FileImage, ExternalLink, X, FolderOpen } from 'lucide-react'
 
 export default function DoctorPatientsPage() {
   const router = useRouter()
-  const [patients, setPatients] = useState<any[]>([])
-  const [search, setSearch]     = useState('')
-  const [loading, setLoading]   = useState(true)
+  const [patients, setPatients]         = useState<any[]>([])
+  const [search, setSearch]             = useState('')
+  const [loading, setLoading]           = useState(true)
+  const [selectedPatient, setSelectedPatient] = useState<any>(null)
+  const [reports, setReports]           = useState<any[]>([])
+  const [reportsLoading, setReportsLoading] = useState(false)
+  const [reportsError, setReportsError] = useState('')
 
   useEffect(() => {
     if (!localStorage.getItem('token')) { router.push('/login'); return }
@@ -29,6 +33,30 @@ export default function DoctorPatientsPage() {
       setPatients(Array.from(map.values()))
     }).catch(() => {}).finally(() => setLoading(false))
   }, [])
+
+  const openRecords = async (patient: any) => {
+    setSelectedPatient(patient)
+    setReports([])
+    setReportsError('')
+    setReportsLoading(true)
+    try {
+      const res = await apiClient.get(`/appointments/patient/${patient._id}/reports`)
+      setReports(res.data || [])
+    } catch (err: any) {
+      setReportsError(err.response?.data?.error ?? 'Could not load records')
+    } finally {
+      setReportsLoading(false)
+    }
+  }
+
+  const openFile = async (reportId: string) => {
+    try {
+      const res = await apiClient.get(`/reports/${reportId}/download`)
+      if (res.data?.fileUrl) window.open(res.data.fileUrl, '_blank')
+    } catch (err: any) {
+      setReportsError(err.response?.data?.error ?? 'Could not open file')
+    }
+  }
 
   const filtered = patients.filter(p =>
     (p.name || '').toLowerCase().includes(search.toLowerCase()) ||
@@ -67,11 +95,69 @@ export default function DoctorPatientsPage() {
                   <span className="flex items-center gap-1"><CalendarDays size={12} /> Last: {p.lastVisit}</span>
                   <span className="flex items-center gap-1"><Users size={12} /> {p.totalVisits} visit{p.totalVisits !== 1 ? 's' : ''}</span>
                 </div>
+                <button
+                  onClick={() => openRecords(p)}
+                  className="mt-3 w-full flex items-center justify-center gap-1.5 text-xs font-bold text-blue-600 hover:bg-blue-50 border border-blue-200 rounded-xl py-2 transition"
+                >
+                  <FolderOpen size={13} /> View Health Records
+                </button>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {/* Health Records Modal */}
+      {selectedPatient && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+              <div>
+                <h3 className="font-bold text-gray-900">Health Records</h3>
+                <p className="text-xs text-gray-400">Shared by {selectedPatient.name}</p>
+              </div>
+              <button onClick={() => setSelectedPatient(null)} className="text-gray-400 hover:text-gray-700 p-1 rounded-xl hover:bg-gray-100 transition">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto flex-1 px-6 py-4 space-y-3">
+              {reportsLoading && <p className="text-center text-gray-400 py-10">Loading...</p>}
+              {reportsError && <p className="text-center text-red-500 text-sm py-6">{reportsError}</p>}
+              {!reportsLoading && !reportsError && reports.length === 0 && (
+                <p className="text-center text-gray-400 text-sm py-10">No records shared with you by this patient.</p>
+              )}
+              {reports.map(report => (
+                <div key={report._id} className="border border-gray-100 rounded-2xl p-4 hover:shadow-sm transition">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex gap-3 min-w-0">
+                      <div className="bg-blue-100 text-blue-600 p-2 rounded-xl shrink-0">
+                        {report.fileType?.startsWith('image/') ? <FileImage size={18} /> : <FileText size={18} />}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-bold text-gray-900 text-sm truncate">{report.name}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">{new Date(report.uploadedAt).toLocaleDateString()}</p>
+                        {report.healthCondition && (
+                          <p className="text-xs text-gray-600 mt-1"><span className="font-semibold">Condition:</span> {report.healthCondition}</p>
+                        )}
+                        {report.prescribedTablets && (
+                          <p className="text-xs text-gray-600 mt-0.5"><span className="font-semibold">Tablets:</span> {report.prescribedTablets}</p>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => openFile(report._id)}
+                      className="flex items-center gap-1 text-xs font-bold text-blue-600 hover:bg-blue-50 px-3 py-1.5 rounded-xl border border-blue-200 transition shrink-0"
+                    >
+                      <ExternalLink size={12} /> Open
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </DoctorSidebar>
   )
 }
