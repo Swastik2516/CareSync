@@ -5,7 +5,7 @@ import Link from 'next/link'
 import {
   Eye, EyeOff, Check, X, Mail, Lock, User, Phone,
   Stethoscope, Building2, Award, IndianRupee, Calendar,
-  ArrowRight, AlertCircle, Camera, ImagePlus
+  ArrowRight, AlertCircle, Camera, ImagePlus, KeyRound
 } from 'lucide-react'
 import Image from 'next/image'
 import apiClient from '@/lib/api'
@@ -40,6 +40,7 @@ export default function RegisterPage() {
   const [showConfirm, setShowConfirm]         = useState(false)
   const [error, setError]                     = useState('')
   const [loading, setLoading]                 = useState(false)
+  const [accessCode, setAccessCode]                   = useState('')
   const [profileImageFile, setProfileImageFile]       = useState<string | null>(null)
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null)
   const [profileImageType, setProfileImageType]       = useState<string>('')
@@ -67,6 +68,7 @@ export default function RegisterPage() {
     e.preventDefault()
     if (!allRulesPassed)  return setError('Please satisfy all password requirements.')
     if (!passwordsMatch)  return setError('Passwords do not match.')
+    if (role === 'DOCTOR' && accessCode !== 'KLE-HOSPITAL-1625') return setError('Invalid doctor access code.')
     setLoading(true)
     setError('')
     try {
@@ -282,6 +284,14 @@ export default function RegisterPage() {
             {/* Doctor fields */}
             {role === 'DOCTOR' && (
               <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">Doctor Access Code</label>
+                  <div className="relative">
+                    <KeyRound size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input type="password" placeholder="Enter hospital access code" value={accessCode} onChange={e => setAccessCode(e.target.value)} required
+                      className="w-full bg-slate-800/60 border border-slate-700/80 rounded-2xl pl-10 pr-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20" />
+                  </div>
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">Specialization</label>
