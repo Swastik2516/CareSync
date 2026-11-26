@@ -11,10 +11,11 @@ export const metadata: Metadata = {
 const jsonLd = {
   '@context': 'https://schema.org',
   '@type': 'WebSite',
-  name: 'CareSync – KLE Hospital Appointment Booking',
+  name: 'KLE Dr. Prabhakar Kore Hospital',
+  alternateName: 'KLE Hospital Belagavi',
   url: 'https://kle-appointment-booking.vercel.app',
   description:
-    "Online appointment booking platform for KLE's Dr. Prabhakar Kore Hospital & Medical Research Centre, Belagavi, Karnataka.",
+    "Book doctor appointments online, check specialist availability and schedule consultations at KLE Dr. Prabhakar Kore Hospital, Belagavi, Karnataka.",
   potentialAction: {
     '@type': 'SearchAction',
     target: {

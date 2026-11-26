@@ -6,47 +6,47 @@ const SITE_URL = 'https://kle-appointment-booking.vercel.app'
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "KLE Hospital Appointment Booking Belagavi | CareSync",
-    template: "%s | CareSync – KLE Hospital Belagavi",
+    default: "KLE Doctor Appointment Booking, Belagavi | KLE Belgaum",
+    template: "%s | KLE Dr. Prabhakar Kore Hospital",
   },
   description:
-    "Book doctor appointments online at KLE's Dr. Prabhakar Kore Hospital & Medical Research Centre, Belagavi (Belgaum). Instant online appointment booking for KLE Hospital specialists.",
+    "Book doctor appointments online, check specialist availability and schedule consultations at KLE Dr. Prabhakar Kore Hospital, Belagavi, Karnataka.",
   keywords: [
     'KLE appointment booking Belagavi',
     'KLE Hospital appointment booking',
     'KLE Hospital online appointment Belgaum',
     'KLE Prabhakar Kore Hospital appointment booking',
     'doctor appointment booking Belagavi',
-    'CareSync appointment booking',
     'KLE Hospital Belagavi doctors',
     'online doctor consultation Belagavi',
+    'KLE Dr. Prabhakar Kore Hospital',
   ],
-  authors: [{ name: 'CareSync' }],
-  creator: 'CareSync',
+  authors: [{ name: 'KLE Dr. Prabhakar Kore Hospital' }],
+  creator: 'KLE Dr. Prabhakar Kore Hospital',
   alternates: {
     canonical: SITE_URL,
   },
   openGraph: {
     type: 'website',
     url: SITE_URL,
-    siteName: 'CareSync – KLE Hospital Appointment Booking',
-    title: "KLE Hospital Appointment Booking Belagavi | CareSync",
+    siteName: 'KLE Dr. Prabhakar Kore Hospital',
+    title: "KLE Doctor Appointment Booking, Belagavi | KLE Belgaum",
     description:
-      "Book doctor appointments online at KLE's Dr. Prabhakar Kore Hospital & Medical Research Centre, Belagavi. Fast, secure, and paperless.",
+      "Book doctor appointments online, check specialist availability and schedule consultations at KLE Dr. Prabhakar Kore Hospital, Belagavi, Karnataka.",
     images: [
       {
         url: `${SITE_URL}/kle-logo.webp`,
         width: 512,
         height: 512,
-        alt: "KLE Hospital Belagavi – CareSync Appointment Booking",
+        alt: "KLE Dr. Prabhakar Kore Hospital, Belagavi",
       },
     ],
   },
   twitter: {
     card: 'summary',
-    title: "KLE Hospital Appointment Booking Belagavi | CareSync",
+    title: "KLE Doctor Appointment Booking, Belagavi | KLE Belgaum",
     description:
-      "Book doctor appointments online at KLE's Dr. Prabhakar Kore Hospital, Belagavi.",
+      "Book doctor appointments online, check specialist availability and schedule consultations at KLE Dr. Prabhakar Kore Hospital, Belagavi, Karnataka.",
     images: [`${SITE_URL}/kle-logo.webp`],
   },
   icons: {
