@@ -37,7 +37,8 @@ export const register = async (req: Request, res: Response) => {
 
     return res.status(201).json({ token, role: user.role, name: user.name });
   } catch (error: any) {
-    return res.status(500).json({ error: error.message });
+    console.error('[register] Error:', error?.message ?? error);
+    return res.status(500).json({ error: 'Registration failed. Please try again later.' });
   }
 };
 
@@ -58,7 +59,8 @@ export const login = async (req: Request, res: Response) => {
 
     return res.json({ token, role: user.role, name: user.name });
   } catch (error: any) {
-    return res.status(500).json({ error: error.message });
+    console.error('[login] Error:', error?.message ?? error);
+    return res.status(500).json({ error: 'Login failed. Please try again later.' });
   }
 };
 
@@ -86,7 +88,8 @@ export const deleteAccount = async (req: AuthRequest, res: Response) => {
     await User.deleteOne({ _id: userId });
     return res.json({ message: 'Account deleted successfully' });
   } catch (error: any) {
-    return res.status(500).json({ error: error.message });
+    console.error('[deleteAccount] Error:', error?.message ?? error);
+    return res.status(500).json({ error: 'Failed to delete account. Please try again later.' });
   }
 };
 
@@ -111,11 +114,16 @@ export const forgotPassword = async (req: Request, res: Response) => {
     await OTP.create({ email: email.toLowerCase(), otpHash });
 
     // Send email
-    await sendOTPEmail(email, otp);
+    try {
+      await sendOTPEmail(email, otp);
+    } catch (mailErr: any) {
+      console.error('[forgotPassword] Email delivery failed:', mailErr?.message ?? mailErr);
+      return res.status(500).json({ error: 'Failed to send OTP email. Please try again later.' });
+    }
 
     return res.status(200).json({ message: 'If this email exists, an OTP has been sent.' });
   } catch (error: any) {
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: 'Something went wrong. Please try again later.' });
   }
 };
 
@@ -133,7 +141,8 @@ export const verifyOTP = async (req: Request, res: Response) => {
 
     return res.status(200).json({ message: 'OTP verified successfully.' });
   } catch (error: any) {
-    return res.status(500).json({ error: error.message });
+    console.error('[verifyOTP] Error:', error?.message ?? error);
+    return res.status(500).json({ error: 'OTP verification failed. Please try again later.' });
   }
 };
 
@@ -165,6 +174,7 @@ export const resetPassword = async (req: Request, res: Response) => {
 
     return res.status(200).json({ message: 'Password reset successfully. You can now log in.' });
   } catch (error: any) {
-    return res.status(500).json({ error: error.message });
+    console.error('[resetPassword] Error:', error?.message ?? error);
+    return res.status(500).json({ error: 'Password reset failed. Please try again later.' });
   }
 };
