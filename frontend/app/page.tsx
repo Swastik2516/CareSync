@@ -16,14 +16,6 @@ const jsonLd = {
   url: 'https://kle-appointment-booking.vercel.app',
   description:
     "Book doctor appointments online, check specialist availability and schedule consultations at KLE Dr. Prabhakar Kore Hospital, Belagavi, Karnataka.",
-  potentialAction: {
-    '@type': 'SearchAction',
-    target: {
-      '@type': 'EntryPoint',
-      urlTemplate: 'https://kle-appointment-booking.vercel.app/register',
-    },
-    'query-input': 'required name=search_term_string',
-  },
 }
 
 export default function LandingPage() {
@@ -136,7 +128,7 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="border-t border-slate-800 px-6 py-8 text-center text-slate-500 text-sm">
         <p>© {new Date().getFullYear()} KLE's Dr. Prabhakar Kore Hospital & Medical Research Centre. All rights reserved.</p>
-        <p className="mt-2">Powered by <span className="text-indigo-400 font-semibold">CareSync</span></p>
+        <p className="mt-2">Online appointment booking platform for KLE Dr. Prabhakar Kore Hospital</p>
       </footer>
 
     </div>
