@@ -93,7 +93,7 @@ export const HOSPITALS: Hospital[] = [
 ]
 
 // Unique cities in display order
-export const HOSPITAL_CITIES = [...new Set(HOSPITALS.map(h => h.city))]
+export const HOSPITAL_CITIES = Array.from(new Set(HOSPITALS.map(h => h.city)))
 
 // Valid hospital names for backend validation
 export const VALID_HOSPITAL_NAMES = new Set(HOSPITALS.map(h => h.name))
