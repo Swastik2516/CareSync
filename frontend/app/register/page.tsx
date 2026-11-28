@@ -5,10 +5,11 @@ import Link from 'next/link'
 import {
   Eye, EyeOff, Check, X, Mail, Lock, User, Phone,
   Stethoscope, Building2, Award, IndianRupee, Calendar,
-  ArrowRight, AlertCircle, Camera, ImagePlus, KeyRound
+  ArrowRight, AlertCircle, Camera, ImagePlus, KeyRound, MapPin, ChevronDown
 } from 'lucide-react'
 import Image from 'next/image'
 import apiClient from '@/lib/api'
+import { HOSPITALS, HOSPITAL_CITIES } from '@/lib/hospitals'
 
 const PASSWORD_RULES = [
   { label: 'At least 8 characters',        test: (p: string) => p.length >= 8 },
@@ -41,6 +42,8 @@ export default function RegisterPage() {
   const [error, setError]                     = useState('')
   const [loading, setLoading]                 = useState(false)
   const [accessCode, setAccessCode]                   = useState('')
+  const [hospitalSearch, setHospitalSearch]           = useState('')
+  const [hospitalDropdownOpen, setHospitalDropdownOpen] = useState(false)
   const [profileImageFile, setProfileImageFile]       = useState<string | null>(null)
   const [profileImagePreview, setProfileImagePreview] = useState<string | null>(null)
   const [profileImageType, setProfileImageType]       = useState<string>('')
@@ -64,11 +67,20 @@ export default function RegisterPage() {
     reader.readAsDataURL(file)
   }
 
+  const filteredHospitals = HOSPITALS.filter(h =>
+    h.name.toLowerCase().includes(hospitalSearch.toLowerCase()) ||
+    h.city.toLowerCase().includes(hospitalSearch.toLowerCase()) ||
+    h.location.toLowerCase().includes(hospitalSearch.toLowerCase())
+  )
+
+  const selectedHospital = HOSPITALS.find(h => h.name === form.hospital)
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!allRulesPassed)  return setError('Please satisfy all password requirements.')
     if (!passwordsMatch)  return setError('Passwords do not match.')
     if (role === 'DOCTOR' && accessCode !== 'KLE-HOSPITAL-1625') return setError('Invalid doctor access code.')
+    if (role === 'DOCTOR' && !form.hospital) return setError('Please select your working hospital.')
     setLoading(true)
     setError('')
     try {
@@ -284,6 +296,8 @@ export default function RegisterPage() {
             {/* Doctor fields */}
             {role === 'DOCTOR' && (
               <div className="space-y-4">
+
+                {/* Access Code */}
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">Doctor Access Code</label>
                   <div className="relative">
@@ -292,25 +306,81 @@ export default function RegisterPage() {
                       className="w-full bg-slate-800/60 border border-slate-700/80 rounded-2xl pl-10 pr-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20" />
                   </div>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">Specialization</label>
-                    <div className="relative">
-                      <Award size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-                      <input type="text" placeholder="e.g. Cardiologist" value={form.specialization} onChange={set('specialization')} required
-                        className="w-full bg-slate-800/60 border border-slate-700/80 rounded-2xl pl-10 pr-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20" />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">Hospital / Clinic</label>
-                    <div className="relative">
-                      <Building2 size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-                      <input type="text" placeholder="e.g. City General Hospital" value={form.hospital} onChange={set('hospital')} required
-                        className="w-full bg-slate-800/60 border border-slate-700/80 rounded-2xl pl-10 pr-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20" />
-                    </div>
+
+                {/* Specialization */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">Specialization</label>
+                  <div className="relative">
+                    <Award size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input type="text" placeholder="e.g. Cardiologist" value={form.specialization} onChange={set('specialization')} required
+                      className="w-full bg-slate-800/60 border border-slate-700/80 rounded-2xl pl-10 pr-4 py-3 text-sm text-white placeholder-slate-500 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20" />
                   </div>
                 </div>
 
+                {/* Hospital Searchable Dropdown */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">Select Working Hospital <span className="text-red-400">*</span></label>
+                  <div className="relative">
+                    <button type="button" onClick={() => setHospitalDropdownOpen(o => !o)}
+                      className={`w-full bg-slate-800/60 border rounded-2xl pl-10 pr-10 py-3 text-sm text-left transition outline-none ${
+                        form.hospital ? 'text-white border-indigo-500' : 'text-slate-500 border-slate-700/80'
+                      } focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20`}>
+                      <Building2 size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <ChevronDown size={16} className={`absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 transition-transform ${hospitalDropdownOpen ? 'rotate-180' : ''}`} />
+                      {selectedHospital ? (
+                        <span className="block truncate">{selectedHospital.name}</span>
+                      ) : 'Select a hospital...'}
+                    </button>
+
+                    {hospitalDropdownOpen && (
+                      <div className="absolute z-50 mt-1 w-full bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden">
+                        <div className="p-2 border-b border-slate-800">
+                          <input autoFocus type="text" placeholder="Search hospital or city..."
+                            value={hospitalSearch} onChange={e => setHospitalSearch(e.target.value)}
+                            className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-500 outline-none focus:border-indigo-500" />
+                        </div>
+                        <div className="max-h-56 overflow-y-auto">
+                          {HOSPITAL_CITIES.filter(city =>
+                            filteredHospitals.some(h => h.city === city)
+                          ).map(city => (
+                            <div key={city}>
+                              <div className="px-3 py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider bg-slate-800/50">
+                                {city}
+                              </div>
+                              {filteredHospitals.filter(h => h.city === city).map(h => (
+                                <button key={h.id} type="button"
+                                  onClick={() => {
+                                    setForm(f => ({ ...f, hospital: h.name }))
+                                    setHospitalDropdownOpen(false)
+                                    setHospitalSearch('')
+                                  }}
+                                  className={`w-full text-left px-3 py-2.5 text-sm hover:bg-slate-800 transition flex items-start gap-2 ${
+                                    form.hospital === h.name ? 'bg-indigo-900/40 text-indigo-300' : 'text-slate-300'
+                                  }`}>
+                                  <MapPin size={13} className="shrink-0 mt-0.5 text-slate-500" />
+                                  <div>
+                                    <p className="font-medium leading-snug">{h.name}</p>
+                                    <p className="text-[11px] text-slate-500">{h.location}</p>
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          ))}
+                          {filteredHospitals.length === 0 && (
+                            <p className="text-sm text-slate-500 text-center py-6">No hospitals found</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  {selectedHospital && (
+                    <p className="text-[11px] text-slate-500 mt-1 flex items-center gap-1">
+                      <MapPin size={11} /> {selectedHospital.city} — {selectedHospital.location}
+                    </p>
+                  )}
+                </div>
+
+                {/* Experience & Fee */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">Experience (Years)</label>
@@ -327,6 +397,7 @@ export default function RegisterPage() {
                   </div>
                 </div>
 
+                {/* Bio */}
                 <div>
                   <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">Professional Bio</label>
                   <textarea placeholder="Brief background of your clinical practice, education, and patient care philosophy..."
@@ -355,6 +426,7 @@ export default function RegisterPage() {
                     <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
                   </label>
                 </div>
+
               </div>
             )}
 

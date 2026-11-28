@@ -5,6 +5,7 @@ import { Availability } from '../models/Availability';
 import { Appointment } from '../models/Appointment';
 import { AuthRequest } from '../middleware/auth';
 import cloudinary from '../config/cloudinary';
+import { isValidHospital } from '../config/hospitals';
 
 // Returns current date string and HH:MM time in IST
 function istNow() {
@@ -33,9 +34,13 @@ export const cleanPastAvailability = async () => {
   }
 };
 
-export const getAllDoctors = async (_req: Request, res: Response) => {
+export const getAllDoctors = async (req: Request, res: Response) => {
   try {
-    const doctors = await DoctorProfile.find().populate('userId', 'name email');
+    const filter: Record<string, any> = {}
+    if (req.query.hospital) {
+      filter.hospital = req.query.hospital as string
+    }
+    const doctors = await DoctorProfile.find(filter).populate('userId', 'name email');
     return res.json(doctors);
   } catch (error: any) {
     return res.status(500).json({ error: error.message });
@@ -107,6 +112,9 @@ export const updateDoctorProfile = async (req: AuthRequest, res: Response) => {
       specialization, hospital, experience, consultationFee, bio,
       upiId, paymentQrImage, bankAccountName, bankAccountNumber, bankIfsc
     } = req.body;
+    if (hospital !== undefined && !isValidHospital(hospital)) {
+      return res.status(400).json({ error: 'Please select a valid hospital from the list.' });
+    }
     const profile = await DoctorProfile.findOneAndUpdate(
       { userId: req.user?.userId },
       { $set: { specialization, hospital, experience, consultationFee, bio,

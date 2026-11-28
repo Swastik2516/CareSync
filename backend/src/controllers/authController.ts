@@ -10,6 +10,7 @@ import { MedicalReport } from '../models/MedicalReport';
 import { OTP } from '../models/OTP';
 import { sendOTPEmail } from '../config/mailer';
 import { AuthRequest } from '../middleware/auth';
+import { isValidHospital } from '../config/hospitals';
 
 export const register = async (req: Request, res: Response) => {
   try {
@@ -23,6 +24,10 @@ export const register = async (req: Request, res: Response) => {
 
     if (role === 'DOCTOR') {
       const { specialization, hospital, experience, consultationFee, bio } = profileData;
+      if (!hospital || !isValidHospital(hospital)) {
+        await User.deleteOne({ _id: user._id });
+        return res.status(400).json({ error: 'Please select a valid hospital from the list.' });
+      }
       await DoctorProfile.create({ userId: user._id, specialization, hospital, experience, consultationFee, bio });
     } else {
       const { dateOfBirth, gender } = profileData;

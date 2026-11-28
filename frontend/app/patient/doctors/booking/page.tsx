@@ -3,12 +3,13 @@ import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import apiClient from '@/lib/api'
-import { Star, MapPin, Clock, IndianRupee, CreditCard, Banknote, X, Loader2 } from 'lucide-react'
+import { Star, MapPin, Clock, IndianRupee, CreditCard, Banknote, X, Loader2, ArrowLeft } from 'lucide-react'
 
 function BookingContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const doctorId = searchParams.get('id') ?? ''
+  const doctorId     = searchParams.get('id') ?? ''
+  const hospitalParam = searchParams.get('hospital') ?? ''
 
   const [doctor, setDoctor]             = useState<any>(null)
   const [slots, setSlots]               = useState<any[]>([])
@@ -18,8 +19,6 @@ function BookingContent() {
   const [loading, setLoading]           = useState(true)
   const [booking, setBooking]           = useState(false)
   const [msg, setMsg]                   = useState('')
-
-  // Payment choice modal
   const [showPayModal, setShowPayModal] = useState(false)
 
   useEffect(() => {
@@ -40,14 +39,12 @@ function BookingContent() {
     setSelectedSlot(null)
   }, [date, doctorId])
 
-  // Step 1: validate and show payment choice modal
   const handleBookClick = () => {
     if (!selectedSlot) return
     setMsg('')
     setShowPayModal(true)
   }
 
-  // Step 2a: Book then redirect to online payment page
   const handlePayOnline = async () => {
     setBooking(true)
     setMsg('')
@@ -57,6 +54,7 @@ function BookingContent() {
         date,
         timeSlot: selectedSlot,
         reason: reason || 'General Consultation',
+        hospital: hospitalParam,
       })
       const appt = res.data?.appointment ?? res.data
       setShowPayModal(false)
@@ -73,7 +71,6 @@ function BookingContent() {
     }
   }
 
-  // Step 2b: Book with cash/OPD mode and go to appointments
   const handlePayAtOPD = async () => {
     setBooking(true)
     setMsg('')
@@ -84,6 +81,7 @@ function BookingContent() {
         timeSlot: selectedSlot,
         reason: reason || 'General Consultation',
         paymentMode: 'CASH',
+        hospital: hospitalParam,
       })
       setShowPayModal(false)
       router.push('/patient/appointments')
@@ -94,6 +92,10 @@ function BookingContent() {
       setBooking(false)
     }
   }
+
+  const backUrl = doctorId
+    ? `/patient/doctors/${doctorId}${hospitalParam ? `?hospital=${encodeURIComponent(hospitalParam)}` : ''}`
+    : '/patient/doctors'
 
   if (loading) return (
     <div className="min-h-screen bg-slate-50">
@@ -112,6 +114,14 @@ function BookingContent() {
     <div className="min-h-screen bg-slate-50">
       <Navbar />
       <div className="max-w-3xl mx-auto px-6 py-8">
+
+        {/* Back button */}
+        <button
+          onClick={() => router.push(backUrl)}
+          className="flex items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:text-indigo-800 mb-5 transition"
+        >
+          <ArrowLeft size={16} /> Back to doctor
+        </button>
 
         {/* Doctor Info Card */}
         <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden">
@@ -132,6 +142,13 @@ function BookingContent() {
         {/* Booking Card */}
         <div className="bg-white rounded-3xl border border-gray-100 p-6 mt-4">
           <h2 className="font-bold text-gray-900 mb-4">Book Appointment</h2>
+
+          {hospitalParam && (
+            <div className="flex items-center gap-2 text-xs text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-xl px-3 py-2 mb-4">
+              <MapPin size={13} className="shrink-0" />
+              <span className="font-medium truncate">{hospitalParam}</span>
+            </div>
+          )}
 
           <label className="text-sm text-gray-600 font-medium">Select Date</label>
           <input type="date" value={date} onChange={e => setDate(e.target.value)}
@@ -199,6 +216,12 @@ function BookingContent() {
                 <span className="text-gray-500">Doctor</span>
                 <span className="font-semibold text-gray-900">{doctor.userId?.name}</span>
               </div>
+              {hospitalParam && (
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Hospital</span>
+                  <span className="font-semibold text-gray-900 text-right max-w-[60%] leading-snug">{hospitalParam}</span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span className="text-gray-500">Date</span>
                 <span className="font-semibold text-gray-900">{date}</span>
@@ -210,7 +233,6 @@ function BookingContent() {
             </div>
 
             <div className="space-y-3">
-              {/* Pay Online */}
               <button onClick={handlePayOnline} disabled={booking}
                 className="w-full flex items-center gap-4 p-4 rounded-2xl border-2 border-indigo-200 hover:border-indigo-500 bg-indigo-50 hover:bg-indigo-100 transition text-left disabled:opacity-60">
                 <div className="w-11 h-11 bg-indigo-600 rounded-xl flex items-center justify-center shrink-0">
@@ -222,7 +244,6 @@ function BookingContent() {
                 </div>
               </button>
 
-              {/* Pay at OPD */}
               <button onClick={handlePayAtOPD} disabled={booking}
                 className="w-full flex items-center gap-4 p-4 rounded-2xl border-2 border-green-200 hover:border-green-500 bg-green-50 hover:bg-green-100 transition text-left disabled:opacity-60">
                 <div className="w-11 h-11 bg-green-600 rounded-xl flex items-center justify-center shrink-0">
@@ -252,4 +273,3 @@ export default function DoctorBookingPage() {
     </Suspense>
   )
 }
-

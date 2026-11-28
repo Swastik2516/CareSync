@@ -3,7 +3,8 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import DoctorSidebar from '@/components/DoctorSidebar'
 import apiClient from '@/lib/api'
-import { Camera, LayoutDashboard, Save, Trash2, X } from 'lucide-react'
+import { Camera, LayoutDashboard, Save, Trash2, X, Building2, ChevronDown, MapPin } from 'lucide-react'
+import { HOSPITALS, HOSPITAL_CITIES, getHospitalByName } from '@/lib/hospitals'
 
 export default function DoctorProfilePage() {
   const router = useRouter()
@@ -18,6 +19,8 @@ export default function DoctorProfilePage() {
   const [deleting, setDeleting]       = useState(false)
   const [uploadingImage, setUploadingImage] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [hospitalSearch, setHospitalSearch]           = useState('')
+  const [hospitalDropdownOpen, setHospitalDropdownOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -102,6 +105,14 @@ export default function DoctorProfilePage() {
     }
   }
 
+  const filteredHospitals = HOSPITALS.filter(h =>
+    h.name.toLowerCase().includes(hospitalSearch.toLowerCase()) ||
+    h.city.toLowerCase().includes(hospitalSearch.toLowerCase()) ||
+    h.location.toLowerCase().includes(hospitalSearch.toLowerCase())
+  )
+
+  const selectedHospital = getHospitalByName(form.hospital)
+
   const field = (label: string, key: keyof typeof form, type = 'text', rows?: number) => (
     <div>
       <label className="text-xs font-bold text-gray-700">{label}</label>
@@ -166,7 +177,68 @@ export default function DoctorProfilePage() {
             </div>
 
             {field('Specialization', 'specialization')}
-            {field('Hospital / Clinic', 'hospital')}
+
+            {/* Hospital Searchable Dropdown */}
+            <div>
+              <label className="text-xs font-bold text-gray-700">Hospital / Clinic</label>
+              <div className="relative mt-1">
+                <button type="button" onClick={() => setHospitalDropdownOpen(o => !o)}
+                  className={`w-full border rounded-2xl pl-10 pr-10 py-3 text-sm text-left outline-none transition ${
+                    form.hospital ? 'text-gray-900 border-indigo-400' : 'text-gray-400 border-gray-200'
+                  } focus:border-indigo-400`}>
+                  <Building2 size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <ChevronDown size={16} className={`absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 transition-transform ${hospitalDropdownOpen ? 'rotate-180' : ''}`} />
+                  <span className="block truncate">{form.hospital || 'Select a hospital...'}</span>
+                </button>
+
+                {hospitalDropdownOpen && (
+                  <div className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden">
+                    <div className="p-2 border-b border-gray-100">
+                      <input autoFocus type="text" placeholder="Search hospital or city..."
+                        value={hospitalSearch} onChange={e => setHospitalSearch(e.target.value)}
+                        className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none focus:border-indigo-400" />
+                    </div>
+                    <div className="max-h-56 overflow-y-auto">
+                      {HOSPITAL_CITIES.filter(city =>
+                        filteredHospitals.some(h => h.city === city)
+                      ).map(city => (
+                        <div key={city}>
+                          <div className="px-3 py-1.5 text-[10px] font-bold text-gray-400 uppercase tracking-wider bg-gray-50">
+                            {city}
+                          </div>
+                          {filteredHospitals.filter(h => h.city === city).map(h => (
+                            <button key={h.id} type="button"
+                              onClick={() => {
+                                setForm(p => ({ ...p, hospital: h.name }))
+                                setHospitalDropdownOpen(false)
+                                setHospitalSearch('')
+                              }}
+                              className={`w-full text-left px-3 py-2.5 text-sm hover:bg-indigo-50 transition flex items-start gap-2 ${
+                                form.hospital === h.name ? 'bg-indigo-50 text-indigo-700' : 'text-gray-700'
+                              }`}>
+                              <MapPin size={13} className="shrink-0 mt-0.5 text-gray-400" />
+                              <div>
+                                <p className="font-medium leading-snug">{h.name}</p>
+                                <p className="text-[11px] text-gray-400">{h.location}</p>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      ))}
+                      {filteredHospitals.length === 0 && (
+                        <p className="text-sm text-gray-400 text-center py-6">No hospitals found</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+              {selectedHospital && (
+                <p className="text-[11px] text-gray-400 mt-1 flex items-center gap-1">
+                  <MapPin size={11} /> {selectedHospital.city} — {selectedHospital.location}
+                </p>
+              )}
+            </div>
+
             {field('Years of Experience', 'experience', 'number')}
             {field('Consultation Fee (₹)', 'consultationFee', 'number')}
             {field('Bio', 'bio', 'text', 3)}

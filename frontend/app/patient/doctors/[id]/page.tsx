@@ -1,14 +1,16 @@
 'use client'
-import { useEffect, useState } from 'react'
-import { useRouter, useParams } from 'next/navigation'
+import { useEffect, useState, Suspense } from 'react'
+import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import Navbar from '@/components/Navbar'
 import apiClient from '@/lib/api'
-import { Star, MapPin, Clock, DollarSign } from 'lucide-react'
+import { Star, MapPin, Clock, IndianRupee, ArrowLeft } from 'lucide-react'
 
-export default function DoctorProfilePage() {
+function DoctorDetailContent() {
   const router = useRouter()
   const params = useParams()
+  const searchParams = useSearchParams()
   const doctorId = Array.isArray(params.id) ? params.id[0] : (params.id ?? '')
+  const hospitalParam = searchParams.get('hospital') ?? ''
 
   const [doctor, setDoctor]             = useState<any>(null)
   const [slots, setSlots]               = useState<any[]>([])
@@ -19,8 +21,6 @@ export default function DoctorProfilePage() {
   const [booking, setBooking]           = useState(false)
   const [msg, setMsg]                   = useState('')
 
-
-
   useEffect(() => {
     if (!localStorage.getItem('token')) { router.push('/login'); return }
     if (!doctorId) return
@@ -28,7 +28,7 @@ export default function DoctorProfilePage() {
       .then(r => setDoctor(r.data))
       .catch(console.error)
       .finally(() => setLoading(false))
-  }, [doctorId])
+  }, [doctorId, router])
 
   useEffect(() => {
     if (!doctorId) return
@@ -43,11 +43,12 @@ export default function DoctorProfilePage() {
     setBooking(true)
     setMsg('')
     try {
-      const res = await apiClient.post('/appointments/book', {
+      await apiClient.post('/appointments/book', {
         doctorId,
         date,
         timeSlot: selectedSlot,
         reason: reason || 'General Consultation',
+        hospital: hospitalParam,
       })
       router.push('/patient/appointments')
     } catch (err: any) {
@@ -56,6 +57,10 @@ export default function DoctorProfilePage() {
       setBooking(false)
     }
   }
+
+  const backUrl = hospitalParam
+    ? `/patient/doctors?hospital=${encodeURIComponent(hospitalParam)}`
+    : '/patient/doctors'
 
   if (loading) return (
     <div className="min-h-screen bg-slate-50">
@@ -75,6 +80,13 @@ export default function DoctorProfilePage() {
       <Navbar />
       <div className="max-w-3xl mx-auto px-6 py-8">
 
+        <button
+          onClick={() => router.push(backUrl)}
+          className="flex items-center gap-1.5 text-sm font-semibold text-indigo-600 hover:text-indigo-800 mb-5 transition"
+        >
+          <ArrowLeft size={16} /> Back to doctors
+        </button>
+
         {/* Doctor Info Card */}
         <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden">
           <img src={doctor.profileImage} alt={doctor.userId?.name} className="w-full h-52 object-cover" />
@@ -85,7 +97,7 @@ export default function DoctorProfilePage() {
               <span className="flex items-center gap-1"><MapPin size={14} />{doctor.hospital}</span>
               <span className="flex items-center gap-1"><Clock size={14} />{doctor.experience} yrs exp</span>
               <span className="flex items-center gap-1"><Star size={14} className="text-yellow-400 fill-yellow-400" />{doctor.rating}</span>
-              <span className="flex items-center gap-1"><DollarSign size={14} />${doctor.consultationFee}</span>
+              <span className="flex items-center gap-1"><IndianRupee size={14} />₹{doctor.consultationFee}</span>
             </div>
             <p className="text-gray-600 text-sm mt-4 leading-6">{doctor.bio}</p>
           </div>
@@ -94,6 +106,13 @@ export default function DoctorProfilePage() {
         {/* Booking Card */}
         <div className="bg-white rounded-3xl border border-gray-100 p-6 mt-4">
           <h2 className="font-bold text-gray-900 mb-4">Book Appointment</h2>
+
+          {hospitalParam && (
+            <div className="flex items-center gap-2 text-xs text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-xl px-3 py-2 mb-4">
+              <MapPin size={13} className="shrink-0" />
+              <span className="font-medium truncate">{hospitalParam}</span>
+            </div>
+          )}
 
           <label className="text-sm text-gray-600 font-medium">Select Date</label>
           <input type="date" value={date} onChange={e => setDate(e.target.value)}
@@ -140,8 +159,18 @@ export default function DoctorProfilePage() {
           </button>
         </div>
       </div>
-
-
     </div>
+  )
+}
+
+export default function DoctorDetailPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center text-gray-400">Loading...</div>
+      </div>
+    }>
+      <DoctorDetailContent />
+    </Suspense>
   )
 }
