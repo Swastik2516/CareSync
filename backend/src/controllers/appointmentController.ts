@@ -6,6 +6,7 @@ import { Availability } from '../models/Availability';
 import { MedicalReport } from '../models/MedicalReport';
 import { DoctorProfile } from '../models/DoctorProfile';
 import { cleanPastAvailability } from './doctorController';
+import { isValidHospital } from '../config/hospitals';
 
 const ACTIVE   = ['PENDING', 'CONFIRMED'];
 const TERMINAL = ['COMPLETED', 'CANCELLED', 'MISSED', 'RESCHEDULED'];
@@ -54,7 +55,7 @@ export const bookAppointment = async (req: AuthRequest, res: Response) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
-    const { doctorId: doctorIdRaw, date, timeSlot, reason, paymentMode } = req.body;
+    const { doctorId: doctorIdRaw, date, timeSlot, reason, paymentMode, hospital } = req.body;
     const patientId = req.user?.userId;
 
     if (!mongoose.Types.ObjectId.isValid(doctorIdRaw)) {
@@ -97,12 +98,32 @@ export const bookAppointment = async (req: AuthRequest, res: Response) => {
     }
 
     const doctorProfile = await DoctorProfile.findOne({ userId: doctorId }).session(session);
-    const amount = doctorProfile?.consultationFee ?? 0;
+    if (!doctorProfile) {
+      await session.abortTransaction();
+      return res.status(404).json({ error: 'Doctor profile not found.' });
+    }
+
+    // hospital is required for new bookings
+    if (!hospital || typeof hospital !== 'string' || !hospital.trim()) {
+      await session.abortTransaction();
+      return res.status(400).json({ error: 'Please select a hospital before booking.' });
+    }
+    if (!isValidHospital(hospital)) {
+      await session.abortTransaction();
+      return res.status(400).json({ error: 'Invalid hospital selected.' });
+    }
+    if (doctorProfile.hospital !== hospital) {
+      await session.abortTransaction();
+      return res.status(400).json({ error: 'The selected doctor does not belong to the selected hospital.' });
+    }
+
+    const amount = doctorProfile.consultationFee ?? 0;
 
     const appointmentId = `CS-${Date.now().toString().slice(-6)}-${Math.floor(1000 + Math.random() * 9000)}`;
     const appointment = new Appointment({
       appointmentId, doctorId, patientId, date, timeSlot, reason,
       status: 'CONFIRMED', amount,
+      hospitalSnapshot: doctorProfile.hospital,
       ...(paymentMode ? { paymentMode } : {}),
     });
     await appointment.save({ session });

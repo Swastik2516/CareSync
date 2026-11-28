@@ -27,6 +27,9 @@ const appointmentSchema = new Schema({
     createdAt: { type: Date, default: Date.now },
   }],
 
+  // ── Hospital snapshot (set at booking time; optional for old records) ──────
+  hospitalSnapshot:  { type: String, default: undefined },
+
   // ── Payment fields ────────────────────────────────────────────────────────
   amount:            { type: Number, default: 0 },
   paymentStatus:     { type: String, enum: ['PENDING', 'PAID', 'FAILED', 'CANCELLED'], default: 'PENDING' },
